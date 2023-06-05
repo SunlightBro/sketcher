@@ -1,0 +1,16 @@
+name: example
+description: An example project that uses sketch.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '>=2.17.0 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  sketch: any
+
+dependency_overrides:
+  sketch:
+    path: ../
