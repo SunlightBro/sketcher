@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:sketch/src/element_modifiers.dart';
 import 'package:sketch/src/elements.dart';
 import 'package:sketch/src/painter.dart';
 
@@ -35,7 +36,6 @@ class _SketchState extends State<Sketch> {
     return GestureDetector(
       excludeFromSemantics: true,
       behavior: HitTestBehavior.translucent,
-
       onTapDown: (TapDownDetails tapDownDetails) {
         final _globalPosition =
             _transformationController.toScene(tapDownDetails.localPosition);
@@ -54,7 +54,32 @@ class _SketchState extends State<Sketch> {
           CustomPaint(
             willChange: true,
             isComplex: true,
-            painter: SketchPainter(<SketchElement>[TextEle(text: "text", color: Colors.red, position: const Offset(300, 500))].lock),
+            painter: SketchPainter(<SketchElement>[
+              TextEle(
+                text: "text",
+                color: Colors.red,
+                point: const Point(300, 300),
+              ),
+              LineEle(
+                const Point(20, 30),
+                const Point(400, 600),
+                Colors.green,
+                LineType.full,
+                4.0,
+              ),
+              FreeEle(
+                <Point<double>>[
+                  const Point(10, 10),
+                  const Point(34, 33),
+                  const Point(32, 98),
+                  const Point(64, 11),
+                ].lock,
+                Colors.purple,
+                LineType.full,
+                4.0,
+              ),
+            ].lock),
+
             //foregroundPainter: ActivePainter(),
             child: Placeholder(),
           ),

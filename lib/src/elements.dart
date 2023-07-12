@@ -10,30 +10,76 @@ import 'package:sketch/src/element_modifiers.dart';
 sealed class SketchElement with Drawable {}
 
 class LineEle extends SketchElement {
-  LineEle(this.start, this.end, this.color, this.lineType);
+  LineEle(
+    this.start,
+    this.end,
+    this.color,
+    this.lineType,
+    this.strokeWidth, {
+    this.description,
+  });
 
+  /// The Line to be drawn
   final Point<double> start;
   final Point<double> end;
+
+  /// [LineEle] modifiers
   final ui.Color color;
   final LineType lineType;
+  final double strokeWidth;
+
+  /// optional description
+  final String? description;
 
   @override
-  void draw(ui.Canvas c, ui.Size size) {
-    // TODO: implement draw
-    _drawLine(canvas: c, start: start, end: end);
+  void draw(ui.Canvas canvas, ui.Size size) {
+    final ui.Paint paint = ui.Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..strokeCap = ui.StrokeCap.round
+      ..style = ui.PaintingStyle.stroke;
+
+    canvas.drawLine(
+      ui.Offset(start.x, start.y),
+      ui.Offset(end.x, end.y),
+      paint,
+    );
   }
 }
 
 class FreeEle extends SketchElement {
-  FreeEle(this.points, this.color, this.lineType);
+  FreeEle(
+    this.points,
+    this.color,
+    this.lineType,
+    this.strokeWidth,
+  );
 
+  /// The Path to be drawn.
   final IList<Point<double>> points;
+
+  /// [FreeEle] modifiers
   final ui.Color color;
   final LineType lineType;
+  final double strokeWidth;
 
   @override
-  void draw(ui.Canvas c, ui.Size size) {
-    // TODO: implement draw
+  void draw(ui.Canvas canvas, ui.Size size) {
+    final ui.Paint paint = ui.Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..strokeCap = ui.StrokeCap.round
+      ..style = ui.PaintingStyle.stroke;
+
+    final path = ui.Path()..moveTo(points[0].x, points[0].y);
+
+    points
+      ..removeAt(0)
+      ..forEach((p) {
+        path.lineTo(p.x, p.y);
+      });
+
+    canvas.drawPath(path, paint);
   }
 }
 
@@ -41,7 +87,7 @@ class TextEle extends SketchElement {
   TextEle({
     required this.text,
     required this.color,
-    required this.position,
+    required this.point,
     this.direction = TextDirection.ltr,
   }) : textPainter = TextPainter(
           text: TextSpan(text: text),
@@ -55,8 +101,8 @@ class TextEle extends SketchElement {
   /// The color of the text.
   final ui.Color color;
 
-  /// The position where the text should be drawn.
-  final Offset position;
+  /// The point where the text should be drawn.
+  final Point<double> point;
 
   /// A text painter that will paint the text on the canvas.
   final TextPainter textPainter;
@@ -65,94 +111,16 @@ class TextEle extends SketchElement {
   final TextDirection direction;
 
   @override
-  void draw(ui.Canvas c, ui.Size size) {
+  void draw(ui.Canvas canvas, ui.Size size) {
     textPainter.layout(maxWidth: size.width);
-    textPainter.paint(c, position - Offset(textPainter.width / 2, textPainter.height / 2));
-
-// Create a TextSpan tree and pass it to the TextPainter constructor.
-//
-// Call layout to prepare the paragraph.
-//
-// Call paint as often as desired to paint the paragraph.
-//
-// Call dispose when the object will no longer be accessed to release native resources.
-// For TextPainter objects that are used repeatedly and stored on a State or RenderObject, call dispose from State.dispose or RenderObject.dispose or similar.
-// For TextPainter objects that are only used ephemerally, it is safe to immediately dispose them after the last call to methods or properties on the object.
-    // TODO: implement draw
+    final position = Offset(point.x, point.y);
+    textPainter.paint(
+      canvas,
+      position - Offset(textPainter.width / 2, textPainter.height / 2),
+    );
   }
 }
 
 mixin Drawable {
-  void draw(ui.Canvas c, ui.Size size);
+  void draw(ui.Canvas canvas, ui.Size size);
 }
-
-// TODO: move
-void _drawLine({required ui.Canvas canvas, required Point<double> start, required Point<double> end}) {
-  final ui.Paint paint = ui.Paint()
-    ..color = const ui.Color(0xFF000000)
-    ..strokeWidth = 4.0
-    ..strokeCap = ui.StrokeCap.round
-    ..style = ui.PaintingStyle.stroke;
-
-  canvas.drawLine(
-    ui.Offset(start.x, start.y),
-    ui.Offset(end.x, end.y),
-    paint,
-  );
-}
-
-// void _drawLineWithText({@required Canvas canvas, @required PaintColor color, @required PaintPosition startPoint, @required PaintPosition endPoint, @required String description, isOutline = false}) {
-//   final p = ui.Paint()
-//     ..color = ui.Color(color.colorValue)
-//     ..strokeWidth = 4.0
-//     ..strokeCap = ui.StrokeCap.round
-//     ..style = ui.PaintingStyle.stroke;
-//
-//   final x = (startPoint.x + endPoint.x) / 2;
-//   final y = (startPoint.y + endPoint.y) / 2;
-//   var r = math.atan2(endPoint.y - startPoint.y, endPoint.x - startPoint.x);
-//   if (r < -math.pi / 2) {
-//     r += math.pi;
-//   }
-//   if (r > math.pi / 2) {
-//     r -= math.pi;
-//   }
-//   canvas
-//     ..drawLine(
-//       ui.Offset(startPoint.x, startPoint.y),
-//       ui.Offset(endPoint.x, endPoint.y),
-//       p,
-//     )
-//     ..save()
-//     ..translate(x, y)
-//     ..rotate(r);
-//
-//   final span = m.TextSpan(
-//     style: m.TextStyle(
-//       color: m.Colors.black,
-//       decorationColor: m.Colors.red,
-//     ),
-//     text: description.isEmpty ? null : isOutline ? '$description m' : description,
-//   );
-//
-//   final painter = m.TextPainter(
-//       text: span,
-//       textAlign: m.TextAlign.left,
-//       textDirection: m.TextDirection.ltr)
-//     ..layout();
-//
-//   final paint = ui.Paint()
-//     ..color = m.Colors.white.withOpacity(0.5);
-//
-//   final w = painter.width;
-//   if (description.isNotEmpty) {
-//     final rect = Offset(-(w + 5) / 2, 2.0) & Size(w + 5, 15.0);
-//     canvas.drawRRect(RRect.fromRectAndRadius(rect, Radius.circular(3.0)), paint);
-//
-// //    final rrect = RRect.fromLTRBR(-(w + 3) / 2, 2.0, w + 3, painter.height, Radius.circular(2.0));
-// //    canvas.drawRRect(rrect, paint);
-//   }
-//   painter.paint(canvas, m.Offset(-w / 2, 0.0));
-//
-//   canvas.restore();
-// }
