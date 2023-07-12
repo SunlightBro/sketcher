@@ -1,7 +1,10 @@
-include: package:flutter_lints/flutter.yaml
+include: package:ffuf_lints/analysis_options.yaml
 
 analyzer:
   language:
     strict-casts: true
     strict-inference: true
     strict-raw-types: true
+  # For custom lints add it as a plugin
+  plugins:
+    - custom_lint

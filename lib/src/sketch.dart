@@ -2,7 +2,6 @@ import 'dart:math';
 
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:sketch/src/element_modifiers.dart';
 import 'package:sketch/src/elements.dart';
 import 'package:sketch/src/painter.dart';
@@ -33,16 +32,22 @@ class _SketchState extends State<Sketch> {
 
   @override
   Widget build(BuildContext context) {
+    final magnifierPosition = panPosition;
     return GestureDetector(
       excludeFromSemantics: true,
       behavior: HitTestBehavior.translucent,
       onTapDown: (TapDownDetails tapDownDetails) {
+        /*
         final _globalPosition = _transformationController.toScene(tapDownDetails.localPosition);
         print(_globalPosition);
+        */
       },
-      onPanDown: (details) => setState(() => panPosition = details.localPosition),
-      onPanStart: (details) => setState(() => panPosition = details.localPosition),
-      onPanUpdate: (details) => setState(() => panPosition = details.localPosition),
+      onPanDown: (details) =>
+          setState(() => panPosition = details.localPosition),
+      onPanStart: (details) =>
+          setState(() => panPosition = details.localPosition),
+      onPanUpdate: (details) =>
+          setState(() => panPosition = details.localPosition),
       onPanEnd: (details) => setState(() => panPosition = null),
       onPanCancel: () => setState(() => panPosition = null),
       child: Stack(
@@ -52,9 +57,9 @@ class _SketchState extends State<Sketch> {
             isComplex: true,
             painter: SketchPainter(<SketchElement>[
               TextEle(
-                text: "text",
-                color: Colors.red,
-                point: const Point(300, 300),
+                "text",
+                Colors.red,
+                const Point(300, 300),
               ),
               LineEle(
                 const Point(20, 30),
@@ -63,7 +68,7 @@ class _SketchState extends State<Sketch> {
                 LineType.full,
                 4.0,
               ),
-              FreeEle(
+              PathEle(
                 <Point<double>>[
                   const Point(10, 10),
                   const Point(304, 33),
@@ -75,15 +80,14 @@ class _SketchState extends State<Sketch> {
                 8.0,
               ),
             ].lock),
-
             //foregroundPainter: ActivePainter(),
             child: Placeholder(),
           ),
           //Placeholder(),
-          if (panPosition != null)
+          if (magnifierPosition != null)
             Positioned(
-              left: panPosition!.dx,
-              top: panPosition!.dy,
+              left: magnifierPosition.dx,
+              top: magnifierPosition.dy,
               child: const RawMagnifier(
                 decoration: MagnifierDecoration(
                   shape: CircleBorder(

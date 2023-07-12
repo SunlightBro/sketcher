@@ -1,10 +1,12 @@
-import 'package:fast_immutable_collections/fast_immutable_collections.dart' as fic;
+import 'package:fast_immutable_collections/fast_immutable_collections.dart'
+    as fic;
 import 'package:flutter/widgets.dart';
 import 'package:sketch/src/elements.dart';
 
 class SketchPainter extends CustomPainter {
   ///Initialize a instance of [SketchPainter] class
   SketchPainter(this.sketchElements);
+
   /// a list of all painted elements
   final fic.IList<SketchElement> sketchElements;
 
@@ -29,6 +31,7 @@ class SketchPainter extends CustomPainter {
 class ActivePainter extends CustomPainter {
   ///Initialize a instance of [ActivePainter] class
   ActivePainter(this.sketchElement);
+
   /// active Element
   final SketchElement? sketchElement;
 

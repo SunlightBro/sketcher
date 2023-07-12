@@ -21,11 +21,17 @@ class LineEle extends SketchElement {
 
   /// The Line to be drawn
   final Point<double> start;
+
+  ///
   final Point<double> end;
 
   /// [LineEle] modifiers
   final ui.Color color;
+
+  ///
   final LineType lineType;
+
+  ///
   final double strokeWidth;
 
   /// optional description
@@ -47,20 +53,24 @@ class LineEle extends SketchElement {
   }
 }
 
-class FreeEle extends SketchElement {
-  FreeEle(
+class PathEle extends SketchElement {
+  PathEle(
     this.points,
     this.color,
     this.lineType,
     this.strokeWidth,
   );
 
-  /// The Path to be drawn.
+  /// The [points] of the Path to be drawn.
   final IList<Point<double>> points;
 
-  /// [FreeEle] modifiers
+  /// The [color] of the text.
   final ui.Color color;
+
+  ///
   final LineType lineType;
+
+  ///
   final double strokeWidth;
 
   @override
@@ -75,20 +85,13 @@ class FreeEle extends SketchElement {
 
     switch (lineType) {
       case LineType.dashed:
-        DashedPathPainter(
-          originalPath: path,
-          pathColor: color,
-          strokeWidth: strokeWidth,
-          dashGapLength: strokeWidth * 2,
-          dashLength: strokeWidth * 4,
-        ).paint(canvas, size);
       case LineType.dotted:
         DashedPathPainter(
           originalPath: path,
           pathColor: color,
           strokeWidth: strokeWidth,
-          dashGapLength: strokeWidth,
-          dashLength: strokeWidth,
+          dashGapLength: strokeWidth * lineType.dashGapLengthFactor,
+          dashLength: strokeWidth * lineType.dashLengthFactor,
         ).paint(canvas, size);
       case _:
         final ui.Paint paint = ui.Paint()
@@ -102,31 +105,27 @@ class FreeEle extends SketchElement {
 }
 
 class TextEle extends SketchElement {
-  TextEle({
-    required this.text,
-    required this.color,
-    required this.point,
-    this.direction = TextDirection.ltr,
-  }) : textPainter = TextPainter(
+  TextEle(
+    this.text,
+    this.color,
+    this.point,
+  ) : textPainter = TextPainter(
           text: TextSpan(text: text),
           textAlign: TextAlign.center,
-          textDirection: direction,
+          textDirection: TextDirection.ltr,
         );
 
-  /// The text to be drawn.
+  /// The [text] to be drawn.
   final String text;
 
-  /// The color of the text.
+  /// The [color] of the text.
   final ui.Color color;
 
-  /// The point where the text should be drawn.
+  /// The [point] where the text should be drawn.
   final Point<double> point;
 
-  /// A text painter that will paint the text on the canvas.
+  /// A [textPainter] that will paint the text on the canvas.
   final TextPainter textPainter;
-
-  /// The direction of the text to be drawn.
-  final TextDirection direction;
 
   @override
   void draw(ui.Canvas canvas, ui.Size size) {
