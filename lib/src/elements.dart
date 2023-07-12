@@ -2,8 +2,8 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/painting.dart';
+import 'package:flutter/material.dart';
+import 'package:sketch/src/dashed_path_painter.dart';
 import 'package:sketch/src/element_modifiers.dart';
 
 @immutable
@@ -65,12 +65,6 @@ class FreeEle extends SketchElement {
 
   @override
   void draw(ui.Canvas canvas, ui.Size size) {
-    final ui.Paint paint = ui.Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..strokeCap = ui.StrokeCap.round
-      ..style = ui.PaintingStyle.stroke;
-
     final path = ui.Path()..moveTo(points[0].x, points[0].y);
 
     points
@@ -79,7 +73,31 @@ class FreeEle extends SketchElement {
         path.lineTo(p.x, p.y);
       });
 
-    canvas.drawPath(path, paint);
+    switch (lineType) {
+      case LineType.dashed:
+        DashedPathPainter(
+          originalPath: path,
+          pathColor: color,
+          strokeWidth: strokeWidth,
+          dashGapLength: strokeWidth * 2,
+          dashLength: strokeWidth * 4,
+        ).paint(canvas, size);
+      case LineType.dotted:
+        DashedPathPainter(
+          originalPath: path,
+          pathColor: color,
+          strokeWidth: strokeWidth,
+          dashGapLength: strokeWidth,
+          dashLength: strokeWidth,
+        ).paint(canvas, size);
+      case _:
+        final ui.Paint paint = ui.Paint()
+          ..color = color
+          ..strokeWidth = strokeWidth
+          ..strokeCap = ui.StrokeCap.round
+          ..style = ui.PaintingStyle.stroke;
+        canvas.drawPath(path, paint);
+    }
   }
 }
 

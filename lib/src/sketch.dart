@@ -37,16 +37,12 @@ class _SketchState extends State<Sketch> {
       excludeFromSemantics: true,
       behavior: HitTestBehavior.translucent,
       onTapDown: (TapDownDetails tapDownDetails) {
-        final _globalPosition =
-            _transformationController.toScene(tapDownDetails.localPosition);
+        final _globalPosition = _transformationController.toScene(tapDownDetails.localPosition);
         print(_globalPosition);
       },
-      onPanDown: (details) =>
-          setState(() => panPosition = details.localPosition),
-      onPanStart: (details) =>
-          setState(() => panPosition = details.localPosition),
-      onPanUpdate: (details) =>
-          setState(() => panPosition = details.localPosition),
+      onPanDown: (details) => setState(() => panPosition = details.localPosition),
+      onPanStart: (details) => setState(() => panPosition = details.localPosition),
+      onPanUpdate: (details) => setState(() => panPosition = details.localPosition),
       onPanEnd: (details) => setState(() => panPosition = null),
       onPanCancel: () => setState(() => panPosition = null),
       child: Stack(
@@ -70,13 +66,13 @@ class _SketchState extends State<Sketch> {
               FreeEle(
                 <Point<double>>[
                   const Point(10, 10),
-                  const Point(34, 33),
-                  const Point(32, 98),
-                  const Point(64, 11),
+                  const Point(304, 33),
+                  const Point(32, 980),
+                  const Point(640, 11),
                 ].lock,
                 Colors.purple,
-                LineType.full,
-                4.0,
+                LineType.dashed,
+                8.0,
               ),
             ].lock),
 
