@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:sketch/src/elements.dart';
 import 'package:sketch/src/painter.dart';
@@ -53,10 +54,11 @@ class _SketchState extends State<Sketch> {
           CustomPaint(
             willChange: true,
             isComplex: true,
-            painter: SketchPainter(<SketchElement>[].lock),
+            painter: SketchPainter(<SketchElement>[TextEle(text: "text", color: Colors.red, position: const Offset(300, 500))].lock),
             //foregroundPainter: ActivePainter(),
+            child: Placeholder(),
           ),
-          Placeholder(),
+          //Placeholder(),
           if (panPosition != null)
             Positioned(
               left: panPosition!.dx,

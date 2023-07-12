@@ -35,16 +35,40 @@ class FreeEle extends SketchElement {
   void draw(ui.Canvas c, ui.Size size) {
     // TODO: implement draw
   }
-  
 }
 
 class TextEle extends SketchElement {
-  TextEle(this.text, this.color);
+  TextEle({
+    required this.text,
+    required this.color,
+    required this.position,
+    this.direction = TextDirection.ltr,
+  }) : textPainter = TextPainter(
+          text: TextSpan(text: text),
+          textAlign: TextAlign.center,
+          textDirection: direction,
+        );
+
+  /// The text to be drawn.
   final String text;
+
+  /// The color of the text.
   final ui.Color color;
+
+  /// The position where the text should be drawn.
+  final Offset position;
+
+  /// A text painter that will paint the text on the canvas.
+  final TextPainter textPainter;
+
+  /// The direction of the text to be drawn.
+  final TextDirection direction;
 
   @override
   void draw(ui.Canvas c, ui.Size size) {
+    textPainter.layout(maxWidth: size.width);
+    textPainter.paint(c, position - Offset(textPainter.width / 2, textPainter.height / 2));
+
 // Create a TextSpan tree and pass it to the TextPainter constructor.
 //
 // Call layout to prepare the paragraph.
@@ -63,10 +87,7 @@ mixin Drawable {
 }
 
 // TODO: move
-void _drawLine(
-    {required ui.Canvas canvas,
-    required Point<double> start,
-    required Point<double> end}) {
+void _drawLine({required ui.Canvas canvas, required Point<double> start, required Point<double> end}) {
   final ui.Paint paint = ui.Paint()
     ..color = const ui.Color(0xFF000000)
     ..strokeWidth = 4.0
