@@ -59,6 +59,18 @@ class LineEle extends SketchElement {
     // return HitPointLine(this, LineHitType.start);
     throw UnimplementedError();
   }
+
+  @override
+  SketchElement create(ui.Offset updateOffset) {
+    // TODO: implement create
+    throw UnimplementedError();
+  }
+
+  @override
+  SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
+    // TODO: implement update
+    throw UnimplementedError();
+  }
 }
 
 class PathEle extends SketchElement {
@@ -116,6 +128,18 @@ class PathEle extends SketchElement {
     // TODO: implement getHit
     throw UnimplementedError();
   }
+
+  @override
+  SketchElement create(ui.Offset updateOffset) {
+    // TODO: implement create
+    throw UnimplementedError();
+  }
+
+  @override
+  SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
+    // TODO: implement update
+    throw UnimplementedError();
+  }
 }
 
 class TextEle extends SketchElement {
@@ -156,34 +180,68 @@ class TextEle extends SketchElement {
     // TODO: implement getHit
     throw UnimplementedError();
   }
+
+  @override
+  SketchElement create(ui.Offset updateOffset) {
+    // TODO: implement create
+    throw UnimplementedError();
+  }
+
+  @override
+  SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
+    // TODO: implement update
+    throw UnimplementedError();
+  }
 }
 
 mixin Drawable {
+  ///
   void draw(ui.Canvas canvas, ui.Size size);
 }
 
 mixin Hitable {
-  HitPoint? getHit(ui.Offset offset);
+  ///
+  HitPoint? getHit(ui.Offset startOffset);
+
+  ///
+  SketchElement update(ui.Offset updateOffset, HitPoint hitPoint);
+
+  ///
+  SketchElement create(ui.Offset updateOffset);
 }
 
 sealed class HitPoint {
-  HitPoint(this.element);
+  HitPoint(
+    this.element,
+    this.hitOffset,
+  );
 
   final SketchElement element;
+  final Offset hitOffset;
 }
 
 class HitPointLine extends HitPoint {
-  HitPointLine(super.element, this.hitType);
+  HitPointLine(
+    super.element,
+    super.hitOffset,
+    this.hitType,
+  );
 
   final LineHitType hitType;
 }
 
 class HitPointPath extends HitPoint {
-  HitPointPath(super.element);
+  HitPointPath(
+    super.element,
+    super.hitOffset,
+  );
 }
 
 class HitPointText extends HitPoint {
-  HitPointText(super.element);
+  HitPointText(
+    super.element,
+    super.hitOffset,
+  );
 }
 
 enum LineHitType { start, end, line }

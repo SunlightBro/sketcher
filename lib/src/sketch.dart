@@ -1,32 +1,34 @@
-import 'dart:math';
-
-import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
-import 'package:sketch/src/element_modifiers.dart';
-import 'package:sketch/src/elements.dart';
 import 'package:sketch/src/painter.dart';
+import 'package:sketch/src/sketch_controller.dart';
 
 class Sketch extends StatefulWidget {
-  const Sketch({super.key});
+  const Sketch({
+    required this.controller,
+    super.key,
+  });
+
+  final SketchController controller;
 
   @override
   State<Sketch> createState() => _SketchState();
 }
 
 class _SketchState extends State<Sketch> {
-  late TransformationController _transformationController;
+  //late TransformationController _transformationController;
 
+  /// [panPosition] used to display the position [MagnifierDecoration]
   Offset? panPosition;
 
   @override
   void initState() {
     super.initState();
-    _transformationController = TransformationController();
+    //_transformationController = TransformationController();
   }
 
   @override
   void dispose() {
-    _transformationController.dispose();
+    //_transformationController.dispose();
     super.dispose();
   }
 
@@ -36,54 +38,39 @@ class _SketchState extends State<Sketch> {
     return GestureDetector(
       excludeFromSemantics: true,
       behavior: HitTestBehavior.translucent,
-      onTapDown: (TapDownDetails tapDownDetails) {
-        /*
-        final _globalPosition = _transformationController.toScene(tapDownDetails.localPosition);
-        print(_globalPosition);
-        */
+      onPanDown: (DragDownDetails details) {
+        setState(() => panPosition = details.localPosition);
+        widget.controller.onPanDown(details);
       },
-      onPanDown: (details) =>
-          setState(() => panPosition = details.localPosition),
-      onPanStart: (details) =>
-          setState(() => panPosition = details.localPosition),
-      onPanUpdate: (details) =>
-          setState(() => panPosition = details.localPosition),
-      onPanEnd: (details) => setState(() => panPosition = null),
-      onPanCancel: () => setState(() => panPosition = null),
+      onPanStart: (DragStartDetails details) {
+        setState(() => panPosition = details.localPosition);
+        widget.controller.onPanStart(details);
+      },
+      onPanUpdate: (DragUpdateDetails details) {
+        setState(() => panPosition = details.localPosition);
+        widget.controller.onPanUpdate(details);
+      },
+      onPanEnd: (DragEndDetails details) {
+        setState(() => panPosition = null);
+        widget.controller.onPanEnd(details);
+      },
+      onPanCancel: () {
+        setState(() => panPosition = null);
+        widget.controller.onPanCancel();
+      },
       child: Stack(
         children: [
           CustomPaint(
             willChange: true,
             isComplex: true,
-            painter: SketchPainter(<SketchElement>[
-              TextEle(
-                "text",
-                Colors.red,
-                const Point(300, 300),
-              ),
-              LineEle(
-                const Point(20, 30),
-                const Point(400, 600),
-                Colors.green,
-                LineType.full,
-                4.0,
-              ),
-              PathEle(
-                <Point<double>>[
-                  const Point(10, 10),
-                  const Point(304, 33),
-                  const Point(32, 980),
-                  const Point(640, 11),
-                ].lock,
-                Colors.purple,
-                LineType.dashed,
-                8.0,
-              ),
-            ].lock),
-            //foregroundPainter: ActivePainter(),
+            painter: SketchPainter(
+              widget.controller.elements,
+            ),
+            foregroundPainter: ActivePainter(
+              widget.controller.activeElement,
+            ),
             child: Placeholder(),
           ),
-          //Placeholder(),
           if (magnifierPosition != null)
             Positioned(
               left: magnifierPosition.dx,

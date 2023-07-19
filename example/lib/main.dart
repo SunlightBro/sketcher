@@ -10,9 +10,37 @@ class ExampleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        body: Sketch(),
+    return MaterialApp();
+  }
+}
+
+class SketchPage extends StatefulWidget {
+  const SketchPage({super.key});
+
+  @override
+  State<SketchPage> createState() => _SketchPageState();
+}
+
+class _SketchPageState extends State<SketchPage> {
+  late SketchController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = SketchController();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Sketch(
+        controller: controller,
       ),
     );
   }
