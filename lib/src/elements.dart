@@ -7,7 +7,7 @@ import 'package:sketch/src/dashed_path_painter.dart';
 import 'package:sketch/src/element_modifiers.dart';
 
 @immutable
-sealed class SketchElement with Drawable {}
+sealed class SketchElement with Drawable, Hitable {}
 
 class LineEle extends SketchElement {
   LineEle(
@@ -50,6 +50,14 @@ class LineEle extends SketchElement {
       ui.Offset(end.x, end.y),
       paint,
     );
+  }
+
+  @override
+  HitPoint? getHit(ui.Offset offset) {
+    // TODO: implement getHit
+    // either null or
+    // return HitPointLine(this, LineHitType.start);
+    throw UnimplementedError();
   }
 }
 
@@ -102,6 +110,12 @@ class PathEle extends SketchElement {
         canvas.drawPath(path, paint);
     }
   }
+
+  @override
+  HitPoint? getHit(ui.Offset offset) {
+    // TODO: implement getHit
+    throw UnimplementedError();
+  }
 }
 
 class TextEle extends SketchElement {
@@ -136,8 +150,40 @@ class TextEle extends SketchElement {
       position - Offset(textPainter.width / 2, textPainter.height / 2),
     );
   }
+
+  @override
+  HitPoint? getHit(ui.Offset offset) {
+    // TODO: implement getHit
+    throw UnimplementedError();
+  }
 }
 
 mixin Drawable {
   void draw(ui.Canvas canvas, ui.Size size);
 }
+
+mixin Hitable {
+  HitPoint? getHit(ui.Offset offset);
+}
+
+sealed class HitPoint {
+  HitPoint(this.element);
+
+  final SketchElement element;
+}
+
+class HitPointLine extends HitPoint {
+  HitPointLine(super.element, this.hitType);
+
+  final LineHitType hitType;
+}
+
+class HitPointPath extends HitPoint {
+  HitPointPath(super.element);
+}
+
+class HitPointText extends HitPoint {
+  HitPointText(super.element);
+}
+
+enum LineHitType { start, end, line }
