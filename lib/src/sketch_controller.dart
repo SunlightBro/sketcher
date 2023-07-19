@@ -1,5 +1,6 @@
 import 'dart:collection';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:sketch/src/element_modifiers.dart';
 import 'package:sketch/src/elements.dart';
@@ -37,6 +38,20 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
+        final touchedElement = elements
+            .firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
+        if (touchedElement == null) {
+          print("Nothing touched");
+          return;
+        }
+        final hitPoint = touchedElement.getHit(details.localPosition);
+        if (hitPoint is HitPointLine) {
+          print("Success");
+          print(hitPoint.hitType);
+        }
+      //elements.remove(touchedElement);
+      //activeElement = touchedElement;
+      //notifyListeners();
     }
   }
 

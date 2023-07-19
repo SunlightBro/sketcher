@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:sketch/src/dashed_path_painter.dart';
 import 'package:sketch/src/element_modifiers.dart';
 
-const double toleranceRadius = 5.0;
+const double toleranceRadius = 20.0;
+const double toleranceRadiusPOI = 40.0;
 
 @immutable
 sealed class SketchElement with Drawable, Hitable {}
@@ -61,13 +62,15 @@ class LineEle extends SketchElement {
     final double a = s.distanceTo(p);
     final b = e.distanceTo(p);
     final c = s.distanceTo(e);
-    if (pow(b, 2) > pow(a, 2) + pow(c, 2) && a < toleranceRadius) {
-      return LineHitType.start;
-    } else if (pow(a, 2) > pow(b, 2) + pow(c, 2) && b < toleranceRadius) {
-      return LineHitType.end;
+
+    /// TODO: prioritize start and end selection of line
+    if (pow(b, 2) > pow(a, 2) + pow(c, 2)) {
+      return a < toleranceRadiusPOI ? LineHitType.start : null;
+    } else if (pow(a, 2) > pow(b, 2) + pow(c, 2)) {
+      return b < toleranceRadiusPOI ? LineHitType.end : null;
     } else {
-      final t = (a+b+c)/2;
-      final h = 2/c * sqrt(t*(t-a)*(t-b)*(t-c));
+      final t = (a + b + c) / 2;
+      final h = 2 / c * sqrt(t * (t - a) * (t - b) * (t - c));
       return h < toleranceRadius ? LineHitType.line : null;
     }
   }
