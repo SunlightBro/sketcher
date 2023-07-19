@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:sketch/src/dashed_path_painter.dart';
 import 'package:sketch/src/element_modifiers.dart';
 
+const double toleranceRadius = 5.0;
+
 @immutable
 sealed class SketchElement with Drawable, Hitable {}
 
@@ -52,12 +54,28 @@ class LineEle extends SketchElement {
     );
   }
 
+  LineHitType? _hitTest(Offset position) {
+    final s = Point(start.x, start.y);
+    final e = Point(end.x, end.y);
+    final p = Point(position.dx, position.dy);
+    final double a = s.distanceTo(p);
+    final b = e.distanceTo(p);
+    final c = s.distanceTo(e);
+    if (pow(b, 2) > pow(a, 2) + pow(c, 2) && a < toleranceRadius) {
+      return LineHitType.start;
+    } else if (pow(a, 2) > pow(b, 2) + pow(c, 2) && b < toleranceRadius) {
+      return LineHitType.end;
+    } else {
+      final t = (a+b+c)/2;
+      final h = 2/c * sqrt(t*(t-a)*(t-b)*(t-c));
+      return h < toleranceRadius ? LineHitType.line : null;
+    }
+  }
+
   @override
-  HitPoint? getHit(ui.Offset offset) {
-    // TODO: implement getHit
-    // either null or
-    // return HitPointLine(this, LineHitType.start);
-    throw UnimplementedError();
+  HitPointLine? getHit(ui.Offset offset) {
+    LineHitType? lineHitType = _hitTest(offset);
+    return lineHitType != null ? HitPointLine(this, offset, lineHitType) : null;
   }
 
   @override
