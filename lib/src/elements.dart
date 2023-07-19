@@ -55,6 +55,7 @@ class LineEle extends SketchElement {
     );
   }
 
+  /// TODO: needs documentation & improvement/simplification
   LineHitType? _hitTest(Offset position) {
     final s = Point(start.x, start.y);
     final e = Point(end.x, end.y);
@@ -63,10 +64,9 @@ class LineEle extends SketchElement {
     final b = e.distanceTo(p);
     final c = s.distanceTo(e);
 
-    /// TODO: prioritize start and end selection of line
-    if (pow(b, 2) > pow(a, 2) + pow(c, 2)) {
+    if (a < toleranceRadiusPOI || pow(b, 2) > pow(a, 2) + pow(c, 2)) {
       return a < toleranceRadiusPOI ? LineHitType.start : null;
-    } else if (pow(a, 2) > pow(b, 2) + pow(c, 2)) {
+    } else if (b < toleranceRadiusPOI || pow(a, 2) > pow(b, 2) + pow(c, 2)) {
       return b < toleranceRadiusPOI ? LineHitType.end : null;
     } else {
       final t = (a + b + c) / 2;
