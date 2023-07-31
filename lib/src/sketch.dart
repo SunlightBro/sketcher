@@ -71,6 +71,7 @@ class _SketchWidgetState extends State<SketchWidget> {
             foregroundPainter: ActivePainter(
               widget.controller.activeElement,
             ),
+            child: Container(),
           ),
           if (magnifierPosition != null)
             Positioned(
