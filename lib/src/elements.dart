@@ -89,20 +89,29 @@ class LineEle extends SketchElement {
 
   @override
   SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
+    // todo: improve Hitable mixin to prevent type checking
     if (hitPoint is! HitPointLine) return this;
     switch (hitPoint.hitType) {
       case LineHitType.start:
+        // set start of line to point of mouse/finger
         final Point<double> newStart = Point(updateOffset.dx, updateOffset.dy);
         return LineEle(newStart, end, color, lineType, strokeWidth);
       case LineHitType.end:
+        // set end of line to point of mouse/finger
         final Point<double> newEnd = Point(updateOffset.dx, updateOffset.dy);
         return LineEle(start, newEnd, color, lineType, strokeWidth);
       case LineHitType.line:
-        // todo: doesn't work as desired
+        // vector between drag start and end
         final differenceVector = updateOffset - hitPoint.hitOffset;
-        print(differenceVector);
-        final Point<double> newStart = start + Point(differenceVector.dx, differenceVector.dy);
-        final Point<double> newEnd = end + Point(differenceVector.dx, differenceVector.dy);
+
+        // using the original start and end position
+        final LineEle originalElement = hitPoint.element as LineEle;
+        final originalStart = originalElement.start;
+        final originalEnd = originalElement.end;
+
+        // creating the new element
+        final Point<double> newStart = originalStart + Point(differenceVector.dx, differenceVector.dy);
+        final Point<double> newEnd = originalEnd + Point(differenceVector.dx, differenceVector.dy);
         return LineEle(newStart, newEnd, color, lineType, strokeWidth);
     }
   }
