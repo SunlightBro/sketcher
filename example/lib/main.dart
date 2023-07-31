@@ -4,7 +4,6 @@ import 'package:example/line_type_switch.dart';
 import 'package:example/sketch_mode_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:sketch/sketch.dart';
-import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 
 void main() {
   runApp(ExampleApp());
@@ -65,7 +64,7 @@ class _SketchPageState extends State<SketchPage> {
     return Scaffold(
       body: Stack(
         children: [
-          Sketch(
+          SketchWidget(
             controller: controller,
           ),
           Align(

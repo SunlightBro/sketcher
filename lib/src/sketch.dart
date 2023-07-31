@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:sketch/src/painter.dart';
 import 'package:sketch/src/sketch_controller.dart';
 
-class Sketch extends StatefulWidget {
-  const Sketch({
+class SketchWidget extends StatefulWidget {
+  const SketchWidget({
     required this.controller,
     super.key,
   });
@@ -11,10 +11,10 @@ class Sketch extends StatefulWidget {
   final SketchController controller;
 
   @override
-  State<Sketch> createState() => _SketchState();
+  State<SketchWidget> createState() => _SketchWidgetState();
 }
 
-class _SketchState extends State<Sketch> {
+class _SketchWidgetState extends State<SketchWidget> {
   //late TransformationController _transformationController;
 
   /// [panPosition] used to display the position [MagnifierDecoration]
@@ -71,7 +71,6 @@ class _SketchState extends State<Sketch> {
             foregroundPainter: ActivePainter(
               widget.controller.activeElement,
             ),
-            child: Placeholder(),
           ),
           if (magnifierPosition != null)
             Positioned(
