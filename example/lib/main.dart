@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:example/line_type_switch.dart';
 import 'package:example/sketch_mode_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:sketch/sketch.dart';
@@ -53,6 +54,12 @@ class _SketchPageState extends State<SketchPage> {
     });
   }
 
+  void _onSelectLineType(LineType lineType) {
+    setState(() {
+      controller.lineType = lineType;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,10 +69,24 @@ class _SketchPageState extends State<SketchPage> {
             controller: controller,
           ),
           Align(
-            alignment: Alignment.topCenter,
-            child: SketchModeSwitch(
-              sketchMode: controller.sketchMode,
-              onSelectSketchMode: _onSelectSketchMode,
+            alignment: Alignment.center,
+            child: Column(
+              children: [
+                SizedBox(height: 16.0),
+                Text("Sketch Mode"),
+                SketchModeSwitch(
+                  sketchMode: controller.sketchMode,
+                  onSelectSketchMode: _onSelectSketchMode,
+                ),
+                if (controller.sketchMode != SketchMode.edit) ...[
+                  SizedBox(height: 8.0),
+                  Text("Line Type"),
+                  LineTypeSwitch(
+                    lineType: controller.lineType,
+                    onSelectLineType: _onSelectLineType,
+                  ),
+                ],
+              ],
             ),
           ),
         ],
