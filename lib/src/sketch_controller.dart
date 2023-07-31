@@ -1,10 +1,11 @@
 import 'dart:collection';
+import 'dart:math';
 
 import 'package:collection/collection.dart';
+import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
 import 'package:sketch/src/element_modifiers.dart';
 import 'package:sketch/src/elements.dart';
-import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 
 enum SketchMode {
   line,
@@ -16,10 +17,10 @@ enum SketchMode {
 class SketchController extends ChangeNotifier {
   SketchController({
     this.elements = const IListConst([]),
-  }) : _history = Queue<IList<SketchElement>>.from(elements);
+  }) : _history = Queue<SketchElement>.from(elements);
 
   // ignore: unused_field
-  Queue<IList<SketchElement>> _history;
+  Queue<SketchElement> _history;
 
   IList<SketchElement> elements;
 
