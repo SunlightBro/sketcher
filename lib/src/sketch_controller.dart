@@ -76,11 +76,7 @@ class SketchController extends ChangeNotifier {
         if (element == null || hitPointLine == null) return;
         activeElement = element.update(
           details.localPosition,
-          HitPointLine(
-            element,
-            hitPointLine.hitOffset,
-            hitPointLine.hitType,
-          ),
+          hitPointLine,
         );
         notifyListeners();
     }
