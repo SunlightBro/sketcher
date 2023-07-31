@@ -98,7 +98,12 @@ class LineEle extends SketchElement {
         final Point<double> newEnd = Point(updateOffset.dx, updateOffset.dy);
         return LineEle(start, newEnd, color, lineType, strokeWidth);
       case LineHitType.line:
-       return this;
+        // todo: doesn't work as desired
+        final differenceVector = updateOffset - hitPoint.hitOffset;
+        print(differenceVector);
+        final Point<double> newStart = start + Point(differenceVector.dx, differenceVector.dy);
+        final Point<double> newEnd = end + Point(differenceVector.dx, differenceVector.dy);
+        return LineEle(newStart, newEnd, color, lineType, strokeWidth);
     }
   }
 }
