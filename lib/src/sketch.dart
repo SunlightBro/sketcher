@@ -23,12 +23,14 @@ class _SketchState extends State<Sketch> {
   @override
   void initState() {
     super.initState();
+    widget.controller.addListener(() => setState(() {}));
     //_transformationController = TransformationController();
   }
 
   @override
   void dispose() {
     //_transformationController.dispose();
+    widget.controller.removeListener(() {});
     super.dispose();
   }
 

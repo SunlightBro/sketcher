@@ -21,7 +21,7 @@ class SketchController extends ChangeNotifier {
   // ignore: unused_field
   Queue<IList<SketchElement>> _history;
 
-  final IList<SketchElement> elements;
+  IList<SketchElement> elements;
 
   SketchElement? activeElement;
   HitPoint? hitpoint;
@@ -38,8 +38,7 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
-        final touchedElement = elements
-            .firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
+        final touchedElement = elements.firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
         if (touchedElement == null) {
           print("Nothing touched");
           return;
@@ -49,9 +48,11 @@ class SketchController extends ChangeNotifier {
           print("Success");
           print(hitPoint.hitType);
         }
-      //elements.remove(touchedElement);
-      //activeElement = touchedElement;
-      //notifyListeners();
+
+        // remove element from the elements list and hand it over to the active painter
+        elements = elements.remove(touchedElement);
+        activeElement = touchedElement;
+        notifyListeners();
     }
   }
 
@@ -79,6 +80,11 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
+        final element = activeElement;
+        if (element == null) return;
+        elements = elements.add(element);
+        activeElement = null;
+        notifyListeners();
     }
   }
 
