@@ -24,7 +24,7 @@ class SketchController extends ChangeNotifier {
   IList<SketchElement> elements;
 
   SketchElement? activeElement;
-  HitPoint? hitpoint;
+  HitPoint? hitPoint;
 
   SketchMode sketchMode = SketchMode.edit;
 
@@ -43,10 +43,10 @@ class SketchController extends ChangeNotifier {
           print("Nothing touched");
           return;
         }
-        final hitPoint = touchedElement.getHit(details.localPosition);
+        hitPoint = touchedElement.getHit(details.localPosition);
         if (hitPoint is HitPointLine) {
           print("Success");
-          print(hitPoint.hitType);
+          //print(hitPoint?.hitType);
         }
 
         // remove element from the elements list and hand it over to the active painter
@@ -71,6 +71,18 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
+        final element = activeElement;
+        final HitPointLine? hitPointLine = hitPoint as HitPointLine?;
+        if (element == null || hitPointLine == null) return;
+        activeElement = element.update(
+          details.localPosition,
+          HitPointLine(
+            element,
+            hitPointLine.hitOffset,
+            hitPointLine.hitType,
+          ),
+        );
+        notifyListeners();
     }
   }
 

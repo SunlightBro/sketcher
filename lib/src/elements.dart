@@ -89,8 +89,17 @@ class LineEle extends SketchElement {
 
   @override
   SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
-    // TODO: implement update
-    throw UnimplementedError();
+    if (hitPoint is! HitPointLine) return this;
+    switch (hitPoint.hitType) {
+      case LineHitType.start:
+        final Point<double> newStart = Point(updateOffset.dx, updateOffset.dy);
+        return LineEle(newStart, end, color, lineType, strokeWidth);
+      case LineHitType.end:
+        final Point<double> newEnd = Point(updateOffset.dx, updateOffset.dy);
+        return LineEle(start, newEnd, color, lineType, strokeWidth);
+      case LineHitType.line:
+       return this;
+    }
   }
 }
 
