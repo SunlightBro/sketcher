@@ -42,17 +42,32 @@ class LineEle extends SketchElement {
 
   @override
   void draw(ui.Canvas canvas, ui.Size size) {
-    final ui.Paint paint = ui.Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..strokeCap = ui.StrokeCap.round
-      ..style = ui.PaintingStyle.stroke;
+    switch (lineType) {
+      case LineType.dashed:
+      case LineType.dotted:
+        final path = ui.Path()..moveTo(start.x, start.y);
+        path.lineTo(end.x, end.y);
+        DashedPathPainter(
+          originalPath: path,
+          pathColor: color,
+          strokeWidth: strokeWidth,
+          dashGapLength: strokeWidth * lineType.dashGapLengthFactor,
+          dashLength: strokeWidth * lineType.dashLengthFactor,
+        ).paint(canvas, size);
+        break;
+      case _:
+        final ui.Paint paint = ui.Paint()
+          ..color = color
+          ..strokeWidth = strokeWidth
+          ..strokeCap = ui.StrokeCap.round
+          ..style = ui.PaintingStyle.stroke;
 
-    canvas.drawLine(
-      ui.Offset(start.x, start.y),
-      ui.Offset(end.x, end.y),
-      paint,
-    );
+        canvas.drawLine(
+          ui.Offset(start.x, start.y),
+          ui.Offset(end.x, end.y),
+          paint,
+        );
+    }
   }
 
   /// TODO: needs documentation & improvement/simplification
