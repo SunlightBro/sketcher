@@ -85,6 +85,7 @@ class _SketchWidgetState extends State<SketchWidget> {
                 ),
                 size: Size(64, 64),
                 magnificationScale: 2,
+                focalPointOffset: Offset(-32, -32),
               ),
             )
         ],
