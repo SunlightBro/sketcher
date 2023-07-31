@@ -38,7 +38,7 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
-        final touchedElement = elements.firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
+        final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
         if (touchedElement == null) {
           print("Nothing touched");
           return;
