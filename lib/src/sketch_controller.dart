@@ -17,10 +17,10 @@ enum SketchMode {
 class SketchController extends ChangeNotifier {
   SketchController({
     this.elements = const IListConst([]),
-  }) : _history = Queue<SketchElement>.from(elements);
+  }) : _history = Queue<IList<SketchElement>>.of(<IList<SketchElement>>[elements]);
 
   // ignore: unused_field
-  Queue<SketchElement> _history;
+  Queue<IList<SketchElement>> _history;
 
   IList<SketchElement> elements;
 
