@@ -30,11 +30,21 @@ class SketchController extends ChangeNotifier {
 
   Color color = const Color(0xFF000000);
   LineType lineType = LineType.full;
-  double lineThickness = 5;
+  double strokeWidth = 10;
 
   void onPanDown(DragDownDetails details) {
     switch (sketchMode) {
       case SketchMode.line:
+        final startPoint = Point(details.localPosition.dx, details.localPosition.dy);
+        activeElement = LineEle(
+          startPoint,
+          startPoint + Point(1, 1),
+          color,
+          lineType,
+          strokeWidth,
+        );
+        notifyListeners();
+        break;
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
@@ -68,6 +78,18 @@ class SketchController extends ChangeNotifier {
   void onPanUpdate(DragUpdateDetails details) {
     switch (sketchMode) {
       case SketchMode.line:
+        final element = activeElement;
+        if (element == null) return;
+        activeElement = element.update(
+          details.localPosition,
+          HitPointLine(
+            element, // doesn't get used
+            Offset.zero, // doesn't get used
+            LineHitType.end,
+          ),
+        );
+        notifyListeners();
+        break;
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
