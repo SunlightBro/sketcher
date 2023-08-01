@@ -30,6 +30,18 @@ class LineTypeSwitch extends StatelessWidget {
             label: Text("Dotted"),
             value: LineType.dotted,
           ),
+          ButtonSegment(
+            label: Text("Arrow Start"),
+            value: LineType.arrowStart,
+          ),
+          ButtonSegment(
+            label: Text("Arrow End"),
+            value: LineType.arrowEnd,
+          ),
+          ButtonSegment(
+            label: Text("Arrow Both"),
+            value: LineType.arrowBetween,
+          ),
         ],
         selected: <LineType>{lineType},
         onSelectionChanged: (Set<LineType> newSelection) {
