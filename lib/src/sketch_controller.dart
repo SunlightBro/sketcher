@@ -136,6 +136,8 @@ class SketchController extends ChangeNotifier {
       case SketchMode.line:
       case SketchMode.path:
       case SketchMode.text:
+        // deselect painted element in non-edit mode after painting is done
+        _removeActiveElement();
       case SketchMode.edit:
     }
   }
