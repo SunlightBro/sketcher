@@ -17,6 +17,7 @@ enum SketchMode {
 class SketchController extends ChangeNotifier {
   SketchController({
     this.elements = const IListConst([]),
+    this.activeElementColor = Colors.orange,
   }) : _history = Queue<IList<SketchElement>>.of(<IList<SketchElement>>[elements]);
 
   // ignore: unused_field
@@ -32,6 +33,7 @@ class SketchController extends ChangeNotifier {
   Color color = const Color(0xFF000000);
   LineType lineType = LineType.full;
   double strokeWidth = 10;
+  final Color activeElementColor;
 
   void onPanDown(DragDownDetails details) {
     switch (sketchMode) {

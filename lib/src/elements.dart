@@ -41,7 +41,7 @@ class LineEle extends SketchElement {
   final String? description;
 
   @override
-  void draw(ui.Canvas canvas, ui.Size size) {
+  void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
     switch (lineType) {
       case LineType.dashed:
       case LineType.dotted:
@@ -49,7 +49,7 @@ class LineEle extends SketchElement {
         path.lineTo(end.x, end.y);
         DashedPathPainter(
           originalPath: path,
-          pathColor: color,
+          pathColor: activeColor ?? color,
           strokeWidth: strokeWidth,
           dashGapLength: strokeWidth * lineType.dashGapLengthFactor,
           dashLength: strokeWidth * lineType.dashLengthFactor,
@@ -57,7 +57,7 @@ class LineEle extends SketchElement {
         break;
       case _:
         final ui.Paint paint = ui.Paint()
-          ..color = color
+          ..color = activeColor ?? color
           ..strokeWidth = strokeWidth
           ..strokeCap = ui.StrokeCap.round
           ..style = ui.PaintingStyle.stroke;
@@ -153,7 +153,7 @@ class PathEle extends SketchElement {
   final double strokeWidth;
 
   @override
-  void draw(ui.Canvas canvas, ui.Size size) {
+  void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
     final path = ui.Path()..moveTo(points[0].x, points[0].y);
 
     points
@@ -225,7 +225,7 @@ class TextEle extends SketchElement {
   final TextPainter textPainter;
 
   @override
-  void draw(ui.Canvas canvas, ui.Size size) {
+  void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
     textPainter.layout(maxWidth: size.width);
     final position = Offset(point.x, point.y);
     textPainter.paint(
@@ -255,7 +255,7 @@ class TextEle extends SketchElement {
 
 mixin Drawable {
   ///
-  void draw(ui.Canvas canvas, ui.Size size);
+  void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]);
 }
 
 mixin Hitable {
