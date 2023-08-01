@@ -43,6 +43,7 @@ class SketchController extends ChangeNotifier {
   SketchMode get sketchMode => _sketchMode;
 
   set sketchMode(SketchMode sketchMode) {
+    // prevent selection throughout the sketch modes
     _removeActiveElement();
     _sketchMode = sketchMode;
   }
