@@ -40,6 +40,53 @@ class LineEle extends SketchElement {
   /// optional description
   final String? description;
 
+  /// Defines and returns the paint for full lines
+  Paint _getLineTypeFullPaint(Color? activeColor) {
+    return ui.Paint()
+      ..color = activeColor ?? color
+      ..strokeWidth = strokeWidth
+      ..strokeCap = ui.StrokeCap.round
+      ..style = ui.PaintingStyle.stroke;
+  }
+
+  /// Draws an arrow (full line and arrowhead) at the given point [arrowAt]
+  void _drawArrow(
+    Point<double> arrowAt, {
+    required ui.Canvas canvas,
+    Color? activeColor,
+  }) {
+    final ui.Paint paint = _getLineTypeFullPaint(activeColor);
+
+    // direction of arrowhead
+    final dX = arrowAt == end ? end.x - start.x : start.x - end.x;
+    final dY = arrowAt == end ? end.y - start.y : start.y - end.y;
+    final angle = atan2(dY, dX);
+
+    // dimensions of arrowhead
+    final arrowSize = 15;
+    final arrowAngle = 25 * pi / 180;
+
+    final path = Path();
+    path.moveTo(arrowAt.x - arrowSize * cos(angle - arrowAngle), arrowAt.y - arrowSize * sin(angle - arrowAngle));
+    path.lineTo(arrowAt.x, arrowAt.y);
+    path.lineTo(arrowAt.x - arrowSize * cos(angle + arrowAngle), arrowAt.y - arrowSize * sin(angle + arrowAngle));
+    path.close();
+    // draw arrow
+    canvas.drawPath(path, paint);
+    // draw full line
+    _drawFullLine(canvas: canvas, activeColor: activeColor);
+  }
+
+  /// Draws a full line
+  void _drawFullLine({required ui.Canvas canvas, Color? activeColor}) {
+    final ui.Paint paint = _getLineTypeFullPaint(activeColor);
+    canvas.drawLine(
+      ui.Offset(start.x, start.y),
+      ui.Offset(end.x, end.y),
+      paint,
+    );
+  }
+
   @override
   void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
     switch (lineType) {
@@ -55,18 +102,18 @@ class LineEle extends SketchElement {
           dashLength: strokeWidth * lineType.dashLengthFactor,
         ).paint(canvas, size);
         break;
-      case _:
-        final ui.Paint paint = ui.Paint()
-          ..color = activeColor ?? color
-          ..strokeWidth = strokeWidth
-          ..strokeCap = ui.StrokeCap.round
-          ..style = ui.PaintingStyle.stroke;
-
-        canvas.drawLine(
-          ui.Offset(start.x, start.y),
-          ui.Offset(end.x, end.y),
-          paint,
-        );
+      case LineType.full:
+        _drawFullLine(canvas: canvas, activeColor: activeColor);
+      case LineType.arrowBetween:
+        _drawArrow(end, canvas: canvas, activeColor: activeColor);
+        _drawArrow(start, canvas: canvas, activeColor: activeColor);
+        break;
+      case LineType.arrowEnd:
+        _drawArrow(end, canvas: canvas, activeColor: activeColor);
+        break;
+      case LineType.arrowStart:
+        _drawArrow(start, canvas: canvas, activeColor: activeColor);
+        break;
     }
   }
 
