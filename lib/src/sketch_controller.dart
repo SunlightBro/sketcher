@@ -21,8 +21,9 @@ class SketchController extends ChangeNotifier {
     this.activeElementColor = Colors.orange,
     this.color = Colors.black,
     this.lineType = LineType.full,
-    this.sketchMode = SketchMode.edit,
-  }) : _history = Queue<IList<SketchElement>>.of(<IList<SketchElement>>[elements]);
+    SketchMode? sketchMode,
+  })  : _history = Queue<IList<SketchElement>>.of(<IList<SketchElement>>[elements]),
+        _sketchMode = sketchMode ?? SketchMode.edit;
 
   // ignore: unused_field
   Queue<IList<SketchElement>> _history;
@@ -32,12 +33,19 @@ class SketchController extends ChangeNotifier {
   SketchElement? activeElement;
   HitPoint? hitPoint;
 
-  SketchMode sketchMode;
+  SketchMode _sketchMode;
 
   Color color;
   LineType lineType;
   double strokeWidth;
   final Color activeElementColor;
+
+  SketchMode get sketchMode => _sketchMode;
+
+  set sketchMode(SketchMode sketchMode) {
+    _removeActiveElement();
+    _sketchMode = sketchMode;
+  }
 
   /// Removes activeElement if it exists and moves it back to the elements list
   void _removeActiveElement() {
