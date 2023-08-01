@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:example/color_picker.dart';
 import 'package:example/line_type_switch.dart';
 import 'package:example/sketch_mode_switch.dart';
 import 'package:flutter/material.dart';
@@ -39,10 +40,12 @@ class _SketchPageState extends State<SketchPage> {
   void initState() {
     super.initState();
     controller = SketchController(elements: samples);
+    controller.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
+    controller.removeListener(() {});
     controller.dispose();
     super.dispose();
   }
@@ -59,8 +62,13 @@ class _SketchPageState extends State<SketchPage> {
     });
   }
 
+  void _onSelectColor(Color color) {
+    controller.color = color;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final activeElementColor = controller.activeElementColor;
     return Scaffold(
       body: Stack(
         children: [
@@ -77,6 +85,14 @@ class _SketchPageState extends State<SketchPage> {
                   sketchMode: controller.sketchMode,
                   onSelectSketchMode: _onSelectSketchMode,
                 ),
+                if (controller.sketchMode == SketchMode.edit) ...[
+                  SizedBox(height: 8.0),
+                  Text("Color"),
+                  ColorPicker(
+                    color: activeElementColor ?? controller.color,
+                    onSelectColor: _onSelectColor,
+                  )
+                ],
                 if (controller.sketchMode != SketchMode.edit) ...[
                   SizedBox(height: 8.0),
                   Text("Line Type"),

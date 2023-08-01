@@ -18,12 +18,13 @@ class SketchController extends ChangeNotifier {
   SketchController({
     this.elements = const IListConst([]),
     this.strokeWidth = 10,
-    this.activeElementColor = Colors.orange,
-    this.color = Colors.black,
+    this.selectionColor = Colors.orange,
     this.lineType = LineType.full,
+    Color? color,
     SketchMode? sketchMode,
   })  : _history = Queue<IList<SketchElement>>.of(<IList<SketchElement>>[elements]),
-        _sketchMode = sketchMode ?? SketchMode.edit;
+        _sketchMode = sketchMode ?? SketchMode.edit,
+        _color = color ?? Colors.black;
 
   // ignore: unused_field
   Queue<IList<SketchElement>> _history;
@@ -35,17 +36,49 @@ class SketchController extends ChangeNotifier {
 
   SketchMode _sketchMode;
 
-  Color color;
+  Color _color;
   LineType lineType;
   double strokeWidth;
-  final Color activeElementColor;
+  final Color selectionColor;
 
   SketchMode get sketchMode => _sketchMode;
+
+  Color get color => _color;
+
+  /// Returns the color of the active/selected element if there is one
+  Color? get activeElementColor {
+    final element = activeElement;
+    if (element == null) return null;
+    return element.getEditableValues().$1;
+    //return switch (element) {
+    //  LineEle(color: var a) => a,
+    //  _ => null,
+    //};
+  }
 
   set sketchMode(SketchMode sketchMode) {
     // prevent selection throughout the sketch modes
     _removeActiveElement();
     _sketchMode = sketchMode;
+  }
+
+  /// Sets color for activeElement or, in case no
+  /// active element is selected, as default color
+  set color(Color color) {
+    final element = activeElement;
+    if (element == null) {
+      // set default color
+      _color = color;
+    } else {
+      // set active element color
+      switch (element) {
+        case LineEle():
+          element.color = color;
+          activeElement = element;
+        case _:
+      }
+    }
+    notifyListeners();
   }
 
   /// Removes activeElement if it exists and moves it back to the elements list

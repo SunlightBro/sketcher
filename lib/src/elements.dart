@@ -9,7 +9,6 @@ import 'package:sketch/src/element_modifiers.dart';
 const double toleranceRadius = 20.0;
 const double toleranceRadiusPOI = 40.0;
 
-@immutable
 sealed class SketchElement with Drawable, Hitable {}
 
 class LineEle extends SketchElement {
@@ -29,7 +28,7 @@ class LineEle extends SketchElement {
   final Point<double> end;
 
   /// [LineEle] modifiers
-  final ui.Color color;
+  ui.Color color;
 
   ///
   final LineType lineType;
@@ -39,6 +38,10 @@ class LineEle extends SketchElement {
 
   /// optional description
   final String? description;
+
+  void setActiveElementColor(Color color) {
+    //return this..color = color;
+  }
 
   /// Defines and returns the paint for full lines
   Paint _getLineTypeFullPaint(Color? activeColor) {
@@ -351,3 +354,17 @@ class HitPointText extends HitPoint {
 }
 
 enum LineHitType { start, end, line }
+
+extension Editable on SketchElement {
+  /// Returns values for element that are editable
+  /// In following order: color, lineType, strokeWidth
+  (Color?, LineType?, double?) getEditableValues() {
+    final SketchElement element = this;
+    switch (element) {
+      case LineEle():
+        return (element.color, element.lineType, element.strokeWidth);
+      case _:
+        return (null, null, null);
+    }
+  }
+}
