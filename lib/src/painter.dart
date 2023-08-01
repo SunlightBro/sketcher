@@ -1,7 +1,6 @@
 import 'package:fast_immutable_collections/fast_immutable_collections.dart'
     as fic;
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:sketch/src/elements.dart';
 
 class SketchPainter extends CustomPainter {

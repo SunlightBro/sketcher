@@ -116,7 +116,8 @@ class DashedPathProperties {
     final end = _calculateLength(metric, _remainingDashGapLength);
     final availableEnd = _calculateLength(metric, dashGapLength);
     // Move path's end point
-    ui.Tangent tangent = metric.getTangentForOffset(end)!;
+    final tangent = metric.getTangentForOffset(end);
+    if (tangent == null) return;
     path.moveTo(tangent.position.dx, tangent.position.dy);
     // Update
     final delta = end - extractedPathLength;
