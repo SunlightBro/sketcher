@@ -19,11 +19,12 @@ class SketchController extends ChangeNotifier {
     this.elements = const IListConst([]),
     this.strokeWidth = 10,
     this.selectionColor = Colors.orange,
-    this.lineType = LineType.full,
+    LineType? lineType,
     Color? color,
     SketchMode? sketchMode,
   })  : _history = Queue<IList<SketchElement>>.of(<IList<SketchElement>>[elements]),
         _sketchMode = sketchMode ?? SketchMode.edit,
+        _lineType = lineType ?? LineType.full,
         _color = color ?? Colors.black;
 
   // ignore: unused_field
@@ -37,7 +38,7 @@ class SketchController extends ChangeNotifier {
   SketchMode _sketchMode;
 
   Color _color;
-  LineType lineType;
+  LineType _lineType;
   double strokeWidth;
   final Color selectionColor;
 
@@ -45,15 +46,20 @@ class SketchController extends ChangeNotifier {
 
   Color get color => _color;
 
+  LineType get lineType => _lineType;
+
   /// Returns the color of the active/selected element if there is one
   Color? get activeElementColor {
     final element = activeElement;
     if (element == null) return null;
     return element.getEditableValues().$1;
-    //return switch (element) {
-    //  LineEle(color: var a) => a,
-    //  _ => null,
-    //};
+  }
+
+  /// Returns the lineType of the active/selected element if there is one
+  LineType? get activeElementLineType {
+    final element = activeElement;
+    if (element == null) return null;
+    return element.getEditableValues().$2;
   }
 
   set sketchMode(SketchMode sketchMode) {
@@ -81,6 +87,25 @@ class SketchController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets lineType for activeElement or, in case no
+  /// active element is selected, as default lineType
+  set lineType(LineType lineType) {
+    final element = activeElement;
+    if (element == null) {
+      // set default lineType
+      _lineType = lineType;
+    } else {
+      // set active lineType
+      switch (element) {
+        case LineEle():
+          element.lineType = lineType;
+          activeElement = element;
+        case _:
+      }
+    }
+    notifyListeners();
+  }
+
   /// Removes activeElement if it exists and moves it back to the elements list
   void _removeActiveElement() {
     final element = activeElement;
@@ -100,7 +125,7 @@ class SketchController extends ChangeNotifier {
           startPoint,
           startPoint + Point(1, 1),
           color,
-          lineType,
+          _lineType,
           strokeWidth,
         );
         notifyListeners();

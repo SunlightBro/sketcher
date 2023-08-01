@@ -57,9 +57,7 @@ class _SketchPageState extends State<SketchPage> {
   }
 
   void _onSelectLineType(LineType lineType) {
-    setState(() {
-      controller.lineType = lineType;
-    });
+    controller.lineType = lineType;
   }
 
   void _onSelectColor(Color color) {
@@ -69,6 +67,7 @@ class _SketchPageState extends State<SketchPage> {
   @override
   Widget build(BuildContext context) {
     final activeElementColor = controller.activeElementColor;
+    final activeElementLineType = controller.activeElementLineType;
     return Scaffold(
       body: Stack(
         children: [
@@ -85,22 +84,18 @@ class _SketchPageState extends State<SketchPage> {
                   sketchMode: controller.sketchMode,
                   onSelectSketchMode: _onSelectSketchMode,
                 ),
-                if (controller.sketchMode == SketchMode.edit) ...[
-                  SizedBox(height: 8.0),
-                  Text("Color"),
-                  ColorPicker(
-                    color: activeElementColor ?? controller.color,
-                    onSelectColor: _onSelectColor,
-                  )
-                ],
-                if (controller.sketchMode != SketchMode.edit) ...[
-                  SizedBox(height: 8.0),
-                  Text("Line Type"),
-                  LineTypeSwitch(
-                    lineType: controller.lineType,
-                    onSelectLineType: _onSelectLineType,
-                  ),
-                ],
+                SizedBox(height: 8.0),
+                Text("Color"),
+                ColorPicker(
+                  color: activeElementColor ?? controller.color,
+                  onSelectColor: _onSelectColor,
+                ),
+                SizedBox(height: 8.0),
+                Text("Line Type"),
+                LineTypeSwitch(
+                  lineType: activeElementLineType ?? controller.lineType,
+                  onSelectLineType: _onSelectLineType,
+                ),
               ],
             ),
           ),

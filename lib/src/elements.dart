@@ -31,7 +31,7 @@ class LineEle extends SketchElement {
   ui.Color color;
 
   ///
-  final LineType lineType;
+  LineType lineType;
 
   ///
   final double strokeWidth;
