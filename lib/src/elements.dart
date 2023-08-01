@@ -34,7 +34,7 @@ class LineEle extends SketchElement {
   LineType lineType;
 
   ///
-  final double strokeWidth;
+  double strokeWidth;
 
   /// optional description
   final String? description;

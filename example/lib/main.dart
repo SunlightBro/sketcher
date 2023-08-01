@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:example/color_picker.dart';
 import 'package:example/line_type_switch.dart';
 import 'package:example/sketch_mode_switch.dart';
+import 'package:example/stroke_width_switch.dart';
 import 'package:flutter/material.dart';
 import 'package:sketch/sketch.dart';
 
@@ -64,10 +65,15 @@ class _SketchPageState extends State<SketchPage> {
     controller.color = color;
   }
 
+  void _onSelectStrokeWidth(double strokeWidth) {
+    controller.strokeWidth = strokeWidth;
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeElementColor = controller.activeElementColor;
     final activeElementLineType = controller.activeElementLineType;
+    final activeElementStrokeWidth = controller.activeElementStrokeWidth;
     return Scaffold(
       body: Stack(
         children: [
@@ -95,6 +101,12 @@ class _SketchPageState extends State<SketchPage> {
                 LineTypeSwitch(
                   lineType: activeElementLineType ?? controller.lineType,
                   onSelectLineType: _onSelectLineType,
+                ),
+                SizedBox(height: 8.0),
+                Text("Stroke Width"),
+                StrokeWidthSwitch(
+                  strokeWidth: activeElementStrokeWidth ?? controller.strokeWidth,
+                  onSelectStrokeWidth: _onSelectStrokeWidth,
                 ),
               ],
             ),
