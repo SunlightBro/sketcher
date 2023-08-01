@@ -39,7 +39,18 @@ class SketchController extends ChangeNotifier {
   double strokeWidth;
   final Color activeElementColor;
 
+  /// Removes activeElement if it exists and moves it back to the elements list
+  void _removeActiveElement() {
+    final element = activeElement;
+    if (element != null) {
+      elements = elements.add(element);
+      activeElement = null;
+      notifyListeners();
+    }
+  }
+
   void onPanDown(DragDownDetails details) {
+    _removeActiveElement();
     switch (sketchMode) {
       case SketchMode.line:
         final startPoint = Point(details.localPosition.dx, details.localPosition.dy);
@@ -117,11 +128,6 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
-        final element = activeElement;
-        if (element == null) return;
-        elements = elements.add(element);
-        activeElement = null;
-        notifyListeners();
     }
   }
 
