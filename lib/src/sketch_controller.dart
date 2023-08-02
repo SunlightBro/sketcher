@@ -95,6 +95,7 @@ class SketchController extends ChangeNotifier {
       }
     }
     notifyListeners();
+    _addChangeToHistory();
   }
 
   /// Sets lineType for activeElement or, in case no
@@ -114,6 +115,7 @@ class SketchController extends ChangeNotifier {
       }
     }
     notifyListeners();
+    _addChangeToHistory();
   }
 
   /// Sets strokeWidth for activeElement or, in case no
@@ -132,6 +134,37 @@ class SketchController extends ChangeNotifier {
         case _:
       }
     }
+    notifyListeners();
+    _addChangeToHistory();
+  }
+
+  void undo() {
+    // print("History: " + _history.length.toString());
+    if (_history.isEmpty) return;
+    _removeActiveElement();
+    _history.removeLast();
+    elements = _history.last;
+    notifyListeners();
+  }
+
+  bool get undoPossible => _history.length > 1;
+
+  /// Add all elements (even the active element) to history
+  void _addChangeToHistory() {
+    // add activeElement to all elements
+    final element = activeElement;
+    final allElements = element == null ? elements : elements.add(element);
+    print(allElements.length);
+
+    // save a history entry only if the current elements list differs to the last
+    if (_history.last != allElements) {
+      print("DIFFERS");
+      _history.add(allElements);
+    }
+
+    // keep history length at max. 5 steps
+    if (_history.length > 6) _history.removeFirst();
+
     notifyListeners();
   }
 
@@ -225,7 +258,9 @@ class SketchController extends ChangeNotifier {
       case SketchMode.text:
         // deselect painted element in non-edit mode after painting is done
         _removeActiveElement();
+        _addChangeToHistory();
       case SketchMode.edit:
+        _addChangeToHistory();
     }
   }
 

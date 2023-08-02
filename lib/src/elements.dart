@@ -180,6 +180,22 @@ class LineEle extends SketchElement {
         return LineEle(newStart, newEnd, color, lineType, strokeWidth);
     }
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LineEle &&
+          runtimeType == other.runtimeType &&
+          start == other.start &&
+          end == other.end &&
+          color == other.color &&
+          lineType == other.lineType &&
+          strokeWidth == other.strokeWidth &&
+          description == other.description;
+
+  @override
+  int get hashCode =>
+      start.hashCode ^ end.hashCode ^ color.hashCode ^ lineType.hashCode ^ strokeWidth.hashCode ^ description.hashCode;
 }
 
 class PathEle extends SketchElement {
