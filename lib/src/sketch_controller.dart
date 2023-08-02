@@ -89,8 +89,13 @@ class SketchController extends ChangeNotifier {
       // set active element color
       switch (element) {
         case LineEle():
-          element.color = color;
-          activeElement = element;
+          activeElement = LineEle(
+            element.start,
+            element.end,
+            color,
+            element.lineType,
+            element.strokeWidth,
+          );
         case _:
       }
     }
@@ -109,8 +114,13 @@ class SketchController extends ChangeNotifier {
       // set active lineType
       switch (element) {
         case LineEle():
-          element.lineType = lineType;
-          activeElement = element;
+          activeElement = LineEle(
+            element.start,
+            element.end,
+            element.color,
+            lineType,
+            element.strokeWidth,
+          );
         case _:
       }
     }
@@ -129,8 +139,13 @@ class SketchController extends ChangeNotifier {
       // set active lineType
       switch (element) {
         case LineEle():
-          element.strokeWidth = strokeWidth;
-          activeElement = element;
+          activeElement = LineEle(
+            element.start,
+            element.end,
+            element.color,
+            element.lineType,
+            strokeWidth,
+          );
         case _:
       }
     }
@@ -139,7 +154,6 @@ class SketchController extends ChangeNotifier {
   }
 
   void undo() {
-    // print("History: " + _history.length.toString());
     if (_history.isEmpty) return;
     _removeActiveElement();
     _history.removeLast();
@@ -154,11 +168,9 @@ class SketchController extends ChangeNotifier {
     // add activeElement to all elements
     final element = activeElement;
     final allElements = element == null ? elements : elements.add(element);
-    print(allElements.length);
 
-    // save a history entry only if the current elements list differs to the last
+    // save a history entry only if the current elements list differs from the last
     if (_history.last != allElements) {
-      print("DIFFERS");
       _history.add(allElements);
     }
 
