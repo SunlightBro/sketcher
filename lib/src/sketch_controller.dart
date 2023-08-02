@@ -45,11 +45,11 @@ class SketchController extends ChangeNotifier {
 
   SketchMode get sketchMode => _sketchMode;
 
-  Color get color => _color;
+  Color get color => activeElementColor ?? _color;
 
-  LineType get lineType => _lineType;
+  LineType get lineType => activeElementLineType ?? _lineType;
 
-  double get strokeWidth => _strokeWidth;
+  double get strokeWidth => activeElementStrokeWidth ?? _strokeWidth;
 
   /// Returns the color of the active/selected element if there is one
   Color? get activeElementColor {

@@ -71,9 +71,6 @@ class _SketchPageState extends State<SketchPage> {
 
   @override
   Widget build(BuildContext context) {
-    final activeElementColor = controller.activeElementColor;
-    final activeElementLineType = controller.activeElementLineType;
-    final activeElementStrokeWidth = controller.activeElementStrokeWidth;
     return Scaffold(
       body: Stack(
         children: [
@@ -93,26 +90,22 @@ class _SketchPageState extends State<SketchPage> {
                 SizedBox(height: 8.0),
                 Text("Color"),
                 ColorPicker(
-                  color: activeElementColor ?? controller.color,
+                  color: controller.color,
                   onSelectColor: _onSelectColor,
                 ),
                 SizedBox(height: 8.0),
                 Text("Line Type"),
                 LineTypeSwitch(
-                  lineType: activeElementLineType ?? controller.lineType,
+                  lineType: controller.lineType,
                   onSelectLineType: _onSelectLineType,
                 ),
                 SizedBox(height: 8.0),
                 Text("Stroke Width"),
                 StrokeWidthSwitch(
-                  strokeWidth: activeElementStrokeWidth ?? controller.strokeWidth,
+                  strokeWidth: controller.strokeWidth,
                   onSelectStrokeWidth: _onSelectStrokeWidth,
                 ),
-                IconButton(
-                    onPressed: controller.undoPossible
-                        ? () => controller.undo()
-                        : null,
-                    icon: Icon(Icons.undo))
+                IconButton(onPressed: controller.undoPossible ? () => controller.undo() : null, icon: Icon(Icons.undo))
               ],
             ),
           ),
