@@ -18,6 +18,10 @@ class SketchController extends ChangeNotifier {
   SketchController({
     this.elements = const IListConst([]),
     this.selectionColor = Colors.orange,
+    this.magnifierScale = 1.5,
+    this.magnifierSize = 100,
+    this.magnifierBorderWidth = 3.0,
+    this.magnifierColor = Colors.grey,
     LineType? lineType,
     Color? color,
     SketchMode? sketchMode,
@@ -42,6 +46,12 @@ class SketchController extends ChangeNotifier {
   LineType _lineType;
   double _strokeWidth;
   final Color selectionColor;
+
+  // magnifier properties
+  final double magnifierScale;
+  final double magnifierSize;
+  final double magnifierBorderWidth;
+  final Color magnifierColor;
 
   SketchElement? get activeElement => _activeElement;
 

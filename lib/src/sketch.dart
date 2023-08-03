@@ -77,15 +77,21 @@ class _SketchWidgetState extends State<SketchWidget> {
             Positioned(
               left: magnifierPosition.dx,
               top: magnifierPosition.dy,
-              child: const RawMagnifier(
+              child: RawMagnifier(
                 decoration: MagnifierDecoration(
                   shape: CircleBorder(
-                    side: BorderSide(color: Color(0xffffcc00), width: 3),
+                    side: BorderSide(
+                      color: widget.controller.magnifierColor,
+                      width: widget.controller.magnifierBorderWidth,
+                    ),
                   ),
                 ),
-                size: Size(64, 64),
-                magnificationScale: 2,
-                focalPointOffset: Offset(-32, -32),
+                size: Size.square(widget.controller.magnifierSize),
+                magnificationScale: widget.controller.magnifierScale,
+                focalPointOffset: Offset(
+                  -widget.controller.magnifierSize / 2,
+                  -widget.controller.magnifierSize / 2,
+                ),
               ),
             )
         ],
