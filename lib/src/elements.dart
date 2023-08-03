@@ -52,6 +52,22 @@ class LineEle extends SketchElement {
       ..style = ui.PaintingStyle.stroke;
   }
 
+  /// Draws circles around the start and end points of the line
+  void _drawActiveElementEnds({required ui.Canvas canvas, required Color color}) {
+    const double activeElementEndRadius = 15.0;
+    final activeElementEndPaint = Paint()..color = color.withOpacity(0.5);
+    canvas.drawCircle(
+      ui.Offset(start.x, start.y),
+      activeElementEndRadius,
+      activeElementEndPaint,
+    );
+    canvas.drawCircle(
+      ui.Offset(end.x, end.y),
+      activeElementEndRadius,
+      activeElementEndPaint,
+    );
+  }
+
   /// Draws an arrow (full line and arrowhead) at the given point [arrowAt]
   void _drawArrow(
     Point<double> arrowAt, {
@@ -118,6 +134,9 @@ class LineEle extends SketchElement {
         _drawArrow(start, canvas: canvas, activeColor: activeColor);
         break;
     }
+    if (activeColor != null) {
+      _drawActiveElementEnds(canvas: canvas, color: activeColor);
+    }
   }
 
   /// TODO: needs documentation & improvement/simplification
@@ -180,7 +199,6 @@ class LineEle extends SketchElement {
         return LineEle(newStart, newEnd, color, lineType, strokeWidth);
     }
   }
-
 }
 
 class PathEle extends SketchElement {
