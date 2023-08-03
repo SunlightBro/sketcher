@@ -76,7 +76,7 @@ class SketchController extends ChangeNotifier {
 
   set sketchMode(SketchMode sketchMode) {
     // prevent selection throughout the sketch modes
-    removeActiveElement();
+    deactivateActiveElement();
     _sketchMode = sketchMode;
   }
 
@@ -157,13 +157,15 @@ class SketchController extends ChangeNotifier {
 
   void undo() {
     if (_history.isEmpty) return;
-    removeActiveElement();
+    deactivateActiveElement();
     _history.removeLast();
     elements = _history.last;
     notifyListeners();
   }
 
   bool get undoPossible => _history.length > 1;
+
+  bool get deletePossible => _activeElement != null;
 
   /// Add all elements (even the active element) to history
   void _addChangeToHistory() {
@@ -183,7 +185,7 @@ class SketchController extends ChangeNotifier {
   }
 
   /// Removes activeElement if it exists and moves it back to the elements list
-  void removeActiveElement() {
+  void deactivateActiveElement() {
     final element = _activeElement;
     if (element != null) {
       elements = elements.add(element);
@@ -192,8 +194,14 @@ class SketchController extends ChangeNotifier {
     }
   }
 
+  void deleteActiveElement() {
+    _activeElement = null;
+    _addChangeToHistory();
+    notifyListeners();
+  }
+
   void onPanDown(DragDownDetails details) {
-    removeActiveElement();
+    deactivateActiveElement();
     switch (sketchMode) {
       case SketchMode.line:
         final startPoint = Point(details.localPosition.dx, details.localPosition.dy);
@@ -271,7 +279,7 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
         // deselect painted element in non-edit mode after painting is done
-        removeActiveElement();
+        deactivateActiveElement();
         _addChangeToHistory();
       case SketchMode.edit:
         _addChangeToHistory();

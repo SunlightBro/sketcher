@@ -105,7 +105,19 @@ class _SketchPageState extends State<SketchPage> {
                   strokeWidth: controller.strokeWidth,
                   onSelectStrokeWidth: _onSelectStrokeWidth,
                 ),
-                IconButton(onPressed: controller.undoPossible ? () => controller.undo() : null, icon: Icon(Icons.undo))
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: controller.undoPossible ? () => controller.undo() : null,
+                      icon: Icon(Icons.undo),
+                    ),
+                    IconButton(
+                      onPressed: controller.deletePossible ? () => controller.deleteActiveElement() : null,
+                      icon: Icon(Icons.delete),
+                    ),
+                  ],
+                )
               ],
             ),
           ),
