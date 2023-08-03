@@ -296,17 +296,15 @@ class SketchController extends ChangeNotifier {
         break;
       case SketchMode.path:
       case SketchMode.text:
+        final position = Point(details.localPosition.dx, details.localPosition.dy);
+        _activeElement = TextEle("text", color, position);
       case SketchMode.edit:
         final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
         if (touchedElement == null) {
-          print("Nothing touched");
+          // nothing touched
           return;
         }
         hitPoint = touchedElement.getHit(details.localPosition);
-        if (hitPoint is HitPointLine) {
-          print("Success");
-          //print(hitPoint?.hitType);
-        }
 
         // remove element from the elements list and hand it over to the active painter
         elements = elements.remove(touchedElement);
@@ -340,23 +338,40 @@ class SketchController extends ChangeNotifier {
       case SketchMode.text:
       case SketchMode.edit:
         final element = _activeElement;
-        final HitPointLine? hitPointLine = hitPoint as HitPointLine?;
-        if (element == null || hitPointLine == null) return;
-        _updateMagneticLine(details, element, hitPointLine);
+        final localHitPoint = hitPoint;
+
+        if (element == null) return;
+        if (localHitPoint == null) return;
+
+        switch (element) {
+          case LineEle():
+            if (localHitPoint is HitPointLine) {
+              _updateMagneticLine(details, element, localHitPoint);
+            }
+          case TextEle():
+            _activeElement = element.update(
+              details.localPosition,
+              localHitPoint,
+            );
+            notifyListeners();
+            break;
+          case _:
+        }
     }
   }
 
   void onPanEnd(DragEndDetails details) {
     switch (sketchMode) {
       case SketchMode.line:
+        deactivateActiveElement();
+        break;
       case SketchMode.path:
       case SketchMode.text:
         // deselect painted element in non-edit mode after painting is done
         deactivateActiveElement();
-        _addChangeToHistory();
       case SketchMode.edit:
-        _addChangeToHistory();
     }
+    _addChangeToHistory();
   }
 
   void onPanCancel() {

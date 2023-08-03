@@ -276,7 +276,10 @@ class TextEle extends SketchElement {
     this.color,
     this.point,
   ) : textPainter = TextPainter(
-          text: TextSpan(text: text),
+          text: TextSpan(
+            text: text,
+            style: TextStyle(color: Colors.white),
+          ),
           textAlign: TextAlign.center,
           textDirection: TextDirection.ltr,
         );
@@ -295,8 +298,25 @@ class TextEle extends SketchElement {
 
   @override
   void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
-    textPainter.layout(maxWidth: size.width);
     final position = Offset(point.x, point.y);
+    textPainter.layout(maxWidth: size.width);
+
+    // background of text element
+    final backgroundPaint = ui.Paint()..color = activeColor ?? Colors.black;
+    canvas.drawRRect(
+      RRect.fromRectXY(
+        Rect.fromCenter(
+          center: position,
+          width: textPainter.width + 16,
+          height: textPainter.height + 16,
+        ),
+        10,
+        10,
+      ),
+      backgroundPaint,
+    );
+
+    // the actual text
     textPainter.paint(
       canvas,
       position - Offset(textPainter.width / 2, textPainter.height / 2),
@@ -305,8 +325,12 @@ class TextEle extends SketchElement {
 
   @override
   HitPoint? getHit(ui.Offset offset) {
-    // TODO: implement getHit
-    throw UnimplementedError();
+    return offset.dx >= point.x - textPainter.width / 2 &&
+            offset.dx <= point.x + textPainter.width / 2 &&
+            offset.dy >= point.y - textPainter.height / 2 &&
+            offset.dy <= point.y + textPainter.height / 2
+        ? HitPointText(this, offset)
+        : null;
   }
 
   @override
@@ -317,8 +341,11 @@ class TextEle extends SketchElement {
 
   @override
   SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
-    // TODO: implement update
-    throw UnimplementedError();
+   return TextEle(
+      text,
+      color,
+      Point(updateOffset.dx, updateOffset.dy),
+    );
   }
 }
 

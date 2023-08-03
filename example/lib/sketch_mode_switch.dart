@@ -28,6 +28,11 @@ class SketchModeSwitch extends StatelessWidget {
             label: Text("Line Mode"),
             value: SketchMode.line,
           ),
+          ButtonSegment(
+            icon: Icon(Icons.text_fields),
+            label: Text("Text Mode"),
+            value: SketchMode.text,
+          ),
         ],
         selected: <SketchMode>{sketchMode},
         onSelectionChanged: (Set<SketchMode> newSelection) {
