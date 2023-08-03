@@ -33,7 +33,7 @@ class SketchController extends ChangeNotifier {
 
   IList<SketchElement> elements;
 
-  SketchElement? activeElement;
+  SketchElement? _activeElement;
   HitPoint? hitPoint;
 
   SketchMode _sketchMode;
@@ -42,6 +42,8 @@ class SketchController extends ChangeNotifier {
   LineType _lineType;
   double _strokeWidth;
   final Color selectionColor;
+
+  SketchElement? get activeElement => _activeElement;
 
   SketchMode get sketchMode => _sketchMode;
 
@@ -53,35 +55,35 @@ class SketchController extends ChangeNotifier {
 
   /// Returns the color of the active/selected element if there is one
   Color? get activeElementColor {
-    final element = activeElement;
+    final element = _activeElement;
     if (element == null) return null;
     return element.getEditableValues().$1;
   }
 
   /// Returns the lineType of the active/selected element if there is one
   LineType? get activeElementLineType {
-    final element = activeElement;
+    final element = _activeElement;
     if (element == null) return null;
     return element.getEditableValues().$2;
   }
 
   /// Returns the strokeWidth of the active/selected element if there is one
   double? get activeElementStrokeWidth {
-    final element = activeElement;
+    final element = _activeElement;
     if (element == null) return null;
     return element.getEditableValues().$3;
   }
 
   set sketchMode(SketchMode sketchMode) {
     // prevent selection throughout the sketch modes
-    _removeActiveElement();
+    removeActiveElement();
     _sketchMode = sketchMode;
   }
 
   /// Sets color for activeElement or, in case no
   /// active element is selected, as default color
   set color(Color color) {
-    final element = activeElement;
+    final element = _activeElement;
     if (element == null) {
       // set default color
       _color = color;
@@ -89,7 +91,7 @@ class SketchController extends ChangeNotifier {
       // set active element color
       switch (element) {
         case LineEle():
-          activeElement = LineEle(
+          _activeElement = LineEle(
             element.start,
             element.end,
             color,
@@ -106,7 +108,7 @@ class SketchController extends ChangeNotifier {
   /// Sets lineType for activeElement or, in case no
   /// active element is selected, as default lineType
   set lineType(LineType lineType) {
-    final element = activeElement;
+    final element = _activeElement;
     if (element == null) {
       // set default lineType
       _lineType = lineType;
@@ -114,7 +116,7 @@ class SketchController extends ChangeNotifier {
       // set active lineType
       switch (element) {
         case LineEle():
-          activeElement = LineEle(
+          _activeElement = LineEle(
             element.start,
             element.end,
             element.color,
@@ -131,7 +133,7 @@ class SketchController extends ChangeNotifier {
   /// Sets strokeWidth for activeElement or, in case no
   /// active element is selected, as default lineType
   set strokeWidth(double strokeWidth) {
-    final element = activeElement;
+    final element = _activeElement;
     if (element == null) {
       // set default lineType
       _strokeWidth = strokeWidth;
@@ -139,7 +141,7 @@ class SketchController extends ChangeNotifier {
       // set active lineType
       switch (element) {
         case LineEle():
-          activeElement = LineEle(
+          _activeElement = LineEle(
             element.start,
             element.end,
             element.color,
@@ -155,7 +157,7 @@ class SketchController extends ChangeNotifier {
 
   void undo() {
     if (_history.isEmpty) return;
-    _removeActiveElement();
+    removeActiveElement();
     _history.removeLast();
     elements = _history.last;
     notifyListeners();
@@ -166,7 +168,7 @@ class SketchController extends ChangeNotifier {
   /// Add all elements (even the active element) to history
   void _addChangeToHistory() {
     // add activeElement to all elements
-    final element = activeElement;
+    final element = _activeElement;
     final allElements = element == null ? elements : elements.add(element);
 
     // save a history entry only if the current elements list differs from the last
@@ -181,21 +183,21 @@ class SketchController extends ChangeNotifier {
   }
 
   /// Removes activeElement if it exists and moves it back to the elements list
-  void _removeActiveElement() {
-    final element = activeElement;
+  void removeActiveElement() {
+    final element = _activeElement;
     if (element != null) {
       elements = elements.add(element);
-      activeElement = null;
+      _activeElement = null;
       notifyListeners();
     }
   }
 
   void onPanDown(DragDownDetails details) {
-    _removeActiveElement();
+    removeActiveElement();
     switch (sketchMode) {
       case SketchMode.line:
         final startPoint = Point(details.localPosition.dx, details.localPosition.dy);
-        activeElement = LineEle(
+        _activeElement = LineEle(
           startPoint,
           startPoint + Point(1, 1),
           color,
@@ -220,7 +222,7 @@ class SketchController extends ChangeNotifier {
 
         // remove element from the elements list and hand it over to the active painter
         elements = elements.remove(touchedElement);
-        activeElement = touchedElement;
+        _activeElement = touchedElement;
         notifyListeners();
     }
   }
@@ -237,9 +239,9 @@ class SketchController extends ChangeNotifier {
   void onPanUpdate(DragUpdateDetails details) {
     switch (sketchMode) {
       case SketchMode.line:
-        final element = activeElement;
+        final element = _activeElement;
         if (element == null) return;
-        activeElement = element.update(
+        _activeElement = element.update(
           details.localPosition,
           HitPointLine(
             element, // doesn't get used
@@ -252,10 +254,10 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
-        final element = activeElement;
+        final element = _activeElement;
         final HitPointLine? hitPointLine = hitPoint as HitPointLine?;
         if (element == null || hitPointLine == null) return;
-        activeElement = element.update(
+        _activeElement = element.update(
           details.localPosition,
           hitPointLine,
         );
@@ -269,7 +271,7 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
         // deselect painted element in non-edit mode after painting is done
-        _removeActiveElement();
+        removeActiveElement();
         _addChangeToHistory();
       case SketchMode.edit:
         _addChangeToHistory();
