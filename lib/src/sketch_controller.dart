@@ -200,6 +200,76 @@ class SketchController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Finds the nearest point on a line defined by two points (p1 and p2)
+  /// from a given target point.
+  ///
+  /// The function calculates the nearest point on the line passing through p1 and p2
+  /// from the target point. It returns the coordinates of the nearest point as a
+  /// [Point<double>] object.
+  ///
+  /// The function takes three parameters:
+  /// - [p1]: The first point defining the line.
+  /// - [p2]: The second point defining the line.
+  /// - [targetPoint]: The point for which we want to find the nearest point on the line.
+  ///
+  /// The function returns a [Point<double>] object representing the nearest point on
+  /// the line from the [targetPoint].
+  Point<double> _findNearestPointOnLine(Point<double> p1, Point<double> p2, Offset targetPoint) {
+    // Calculate the vector from point p1 to point p2
+    Point<double> lineVector = Point<double>(p2.x - p1.x, p2.y - p1.y);
+
+    // Calculate the vector from point p1 to the target point
+    Point<double> targetVector = Point<double>(targetPoint.dx - p1.x, targetPoint.dy - p1.y);
+
+    // Calculate the dot product
+    double dotProduct = lineVector.x * targetVector.x + lineVector.y * targetVector.y;
+
+    // Calculate the squared length of the line vector
+    double lineLengthSquared = lineVector.x * lineVector.x + lineVector.y * lineVector.y;
+
+    // Calculate the parameter 't' to find the nearest point on the line
+    double t = dotProduct / lineLengthSquared;
+
+    // If t < 0, the nearest point is before p1 on the line
+    // If t > 1, the nearest point is after p2 on the line
+    // Otherwise, the nearest point is between p1 and p2 on the line
+    if (t < 0) {
+      return p1;
+    } else if (t > 1) {
+      return p2;
+    } else {
+      // Calculate the nearest point on the line
+      double nearestX = p1.x + t * lineVector.x;
+      double nearestY = p1.y + t * lineVector.y;
+      return Point<double>(nearestX, nearestY);
+    }
+  }
+
+  /// Updates the active element with the new position and snaps
+  /// the line to the nearest line if it is close enough
+  void _updateMagneticLine(DragUpdateDetails details, SketchElement element, HitPointLine hitPointLine) {
+    final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
+    if (touchedElement == null || touchedElement is! LineEle) {
+      // update line end
+      _activeElement = element.update(
+        details.localPosition,
+        hitPointLine,
+      );
+    } else {
+      // calculate nearest point on line and snap the line end to that point
+      final nearestPoint = _findNearestPointOnLine(
+        touchedElement.start,
+        touchedElement.end,
+        details.localPosition,
+      );
+      _activeElement = element.update(
+        Offset(nearestPoint.x, nearestPoint.y),
+        hitPointLine,
+      );
+    }
+    notifyListeners();
+  }
+
   void onPanDown(DragDownDetails details) {
     deactivateActiveElement();
     switch (sketchMode) {
@@ -249,15 +319,12 @@ class SketchController extends ChangeNotifier {
       case SketchMode.line:
         final element = _activeElement;
         if (element == null) return;
-        _activeElement = element.update(
-          details.localPosition,
-          HitPointLine(
-            element, // doesn't get used
-            Offset.zero, // doesn't get used
-            LineHitType.end,
-          ),
+        final hitPointLine = HitPointLine(
+          element, // doesn't get used
+          Offset.zero, // doesn't get used
+          LineHitType.end,
         );
-        notifyListeners();
+        _updateMagneticLine(details, element, hitPointLine);
         break;
       case SketchMode.path:
       case SketchMode.text:
@@ -265,11 +332,7 @@ class SketchController extends ChangeNotifier {
         final element = _activeElement;
         final HitPointLine? hitPointLine = hitPoint as HitPointLine?;
         if (element == null || hitPointLine == null) return;
-        _activeElement = element.update(
-          details.localPosition,
-          hitPointLine,
-        );
-        notifyListeners();
+        _updateMagneticLine(details, element, hitPointLine);
     }
   }
 
