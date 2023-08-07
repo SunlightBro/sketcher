@@ -39,7 +39,6 @@ class LineEle extends SketchElement {
   /// optional description
   final String? description;
 
-
   /// Defines and returns the paint for full lines
   Paint _getLineTypeFullPaint(Color? activeColor) {
     return ui.Paint()
@@ -338,11 +337,64 @@ class TextEle extends SketchElement {
 
   @override
   SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
-   return TextEle(
+    return TextEle(
       text,
       color,
       Point(updateOffset.dx, updateOffset.dy),
     );
+  }
+}
+
+class PolyEle extends SketchElement {
+  PolyEle(
+    this.points,
+    this.finished,
+    this.color,
+    this.lineType,
+    this.strokeWidth, {
+    this.descriptions,
+  });
+
+  final IList<Point<double>> points;
+
+  /// If start point is same as endpoint (that doesn't get added again to the points list)
+  final bool finished;
+
+  /// [LineEle] modifiers
+  final ui.Color color;
+
+  ///
+  final LineType lineType;
+
+  ///
+  final double strokeWidth;
+
+  /// optional description
+  final IList<String?>? descriptions;
+
+  PolyHitType? _hitTest(Offset position) {}
+
+  @override
+  SketchElement create(ui.Offset updateOffset) {
+    // TODO: implement create
+    throw UnimplementedError();
+  }
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, [ui.Color? activeColor]) {
+    // TODO: implement draw
+  }
+
+  @override
+  HitPoint? getHit(ui.Offset startOffset) {
+    // TODO: implement getHit
+    throw UnimplementedError();
+  }
+
+  @override
+  SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
+    // TODO: implement update
+    throw UnimplementedError();
   }
 }
 
@@ -382,6 +434,16 @@ class HitPointLine extends HitPoint {
   final LineHitType hitType;
 }
 
+class HitPointPoly extends HitPoint {
+  HitPointPoly(
+    super.element,
+    super.hitOffset,
+    this.hitType,
+  );
+
+  final PolyHitType hitType;
+}
+
 class HitPointPath extends HitPoint {
   HitPointPath(
     super.element,
@@ -397,6 +459,8 @@ class HitPointText extends HitPoint {
 }
 
 enum LineHitType { start, end, line }
+
+enum PolyHitType { point, line }
 
 extension Editable on SketchElement {
   /// Returns values for element that are editable
