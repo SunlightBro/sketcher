@@ -39,9 +39,6 @@ class LineEle extends SketchElement {
   /// optional description
   final String? description;
 
-  void setActiveElementColor(Color color) {
-    //return this..color = color;
-  }
 
   /// Defines and returns the paint for full lines
   Paint _getLineTypeFullPaint(Color? activeColor) {
