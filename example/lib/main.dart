@@ -74,9 +74,7 @@ class _SketchPageState extends State<SketchPage> {
     return Scaffold(
       body: Stack(
         children: [
-          SketchWidget(
-            controller: controller,
-          ),
+          SketchWidget(controller: controller),
           Align(
             alignment: Alignment.center,
             child: Column(
@@ -104,6 +102,16 @@ class _SketchPageState extends State<SketchPage> {
                 StrokeWidthSwitch(
                   strokeWidth: controller.strokeWidth,
                   onSelectStrokeWidth: _onSelectStrokeWidth,
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Grid Lines:'),
+                    Switch(
+                      value: controller.gridLinesEnabled,
+                      onChanged: (value) => controller.gridLinesEnabled = value,
+                    )
+                  ],
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,

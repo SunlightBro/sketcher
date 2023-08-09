@@ -62,6 +62,15 @@ class _SketchWidgetState extends State<SketchWidget> {
       },
       child: Stack(
         children: [
+          if (widget.controller.gridLinesEnabled)
+            Positioned.fill(
+              child: GridPaper(
+                color: widget.controller.gridLinesColor,
+                divisions: 1,
+                subdivisions: 1,
+                interval: 20,
+              ),
+            ),
           CustomPaint(
             willChange: true,
             isComplex: true,
@@ -93,7 +102,7 @@ class _SketchWidgetState extends State<SketchWidget> {
                   -widget.controller.magnifierSize / 2,
                 ),
               ),
-            )
+            ),
         ],
       ),
     );
