@@ -56,6 +56,7 @@ class _SketchWidgetState extends State<SketchWidget> {
         setState(() => panPosition = null);
         widget.controller.onPanEnd(details);
       },
+      onTapUp: (TapUpDetails details) => widget.controller.onTapUp(details),
       onPanCancel: () {
         setState(() => panPosition = null);
         widget.controller.onPanCancel();

@@ -40,7 +40,10 @@ class _SketchPageState extends State<SketchPage> {
   @override
   void initState() {
     super.initState();
-    controller = SketchController(elements: samples);
+    controller = SketchController(
+      elements: samples,
+      onEditText: onEditTextElement,
+    );
     controller.addListener(() => setState(() {}));
   }
 
@@ -50,6 +53,50 @@ class _SketchPageState extends State<SketchPage> {
     controller.dispose();
     super.dispose();
   }
+
+  Future<String?> onEditTextElement(String? text) async => await showDialog<String?>(
+        context: context,
+        builder: (context) {
+          final textController = TextEditingController(text: text);
+          final initialValue = text ?? '';
+          bool hasChanges = false;
+
+          return AlertDialog(
+            title: Text('Input text value'),
+            contentPadding: EdgeInsets.all(10),
+            content: StatefulBuilder(builder: (context, setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: textController,
+                    autofocus: true,
+                    onChanged: (currentValue) => setState(() {
+                      hasChanges = initialValue != currentValue;
+                    }),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          onPressed: hasChanges ? () => Navigator.of(context).pop(textController.text) : null,
+                          child: Text('Save'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: Text('Cancel'),
+                        ),
+                      ],
+                    ),
+                  )
+                ],
+              );
+            }),
+          );
+        },
+      );
 
   void _onSelectSketchMode(SketchMode sketchMode) {
     setState(() {

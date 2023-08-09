@@ -23,6 +23,7 @@ class SketchController extends ChangeNotifier {
     this.magnifierBorderWidth = 3.0,
     this.magnifierColor = Colors.grey,
     this.gridLinesColor = Colors.grey,
+    this.onEditText,
     LineType? lineType,
     Color? color,
     SketchMode? sketchMode,
@@ -39,6 +40,8 @@ class SketchController extends ChangeNotifier {
   Queue<IList<SketchElement>> _history;
 
   IList<SketchElement> elements;
+
+  Future<String?> Function(String? text)? onEditText;
 
   SketchElement? _activeElement;
   HitPoint? hitPoint;
@@ -340,8 +343,7 @@ class SketchController extends ChangeNotifier {
         break;
 
       case SketchMode.text:
-        final position = Point(details.localPosition.dx, details.localPosition.dy);
-        _activeElement = TextEle("text", color, position);
+        break;
       case SketchMode.edit:
         final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
         if (touchedElement == null) {
@@ -446,6 +448,42 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
+    }
+  }
+
+  void onTapUp(TapUpDetails tapUpDetails) {
+    switch (sketchMode) {
+      // On tap up while text mode, call onEditText and pass a null value for the string value of the text since it is new
+      case SketchMode.text:
+        final position = Point(tapUpDetails.localPosition.dx, tapUpDetails.localPosition.dy);
+        onEditText?.call(null).then((value) {
+          if (value != null && value.isNotEmpty) {
+            _activeElement = TextEle(value, color, position);
+            notifyListeners();
+          }
+        });
+      // On tap up while edit mode and selected element is text, call onEditText and pass the text element's value
+      case SketchMode.edit:
+        final element = _activeElement;
+        final localHitPoint = hitPoint;
+
+        if (element == null) return;
+        if (localHitPoint == null) return;
+
+        switch (element) {
+          case TextEle():
+            final position = Point(tapUpDetails.localPosition.dx, tapUpDetails.localPosition.dy);
+            onEditText?.call(element.text).then((value) {
+              if (value != null && value.isNotEmpty) {
+                _activeElement = TextEle(value, color, position);
+                notifyListeners();
+              }
+            });
+          case _:
+            break;
+        }
+      case _:
+        break;
     }
   }
 }
