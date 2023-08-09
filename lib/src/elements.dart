@@ -227,19 +227,21 @@ class PathEle extends SketchElement {
         path.lineTo(p.x, p.y);
       });
 
+    final currentColor = activeColor ?? color;
+
     switch (lineType) {
       case LineType.dashed:
       case LineType.dotted:
         DashedPathPainter(
           originalPath: path,
-          pathColor: color,
+          pathColor: currentColor,
           strokeWidth: strokeWidth,
           dashGapLength: strokeWidth * lineType.dashGapLengthFactor,
           dashLength: strokeWidth * lineType.dashLengthFactor,
         ).paint(canvas, size);
       case _:
         final ui.Paint paint = ui.Paint()
-          ..color = color
+          ..color = currentColor
           ..strokeWidth = strokeWidth
           ..strokeCap = ui.StrokeCap.round
           ..style = ui.PaintingStyle.stroke;
@@ -247,10 +249,21 @@ class PathEle extends SketchElement {
     }
   }
 
+  /// Returns true if offset/position is near any of the Path's points
   @override
   HitPoint? getHit(ui.Offset offset) {
-    // TODO: implement getHit
-    throw UnimplementedError();
+    final currentPosition = Point<double>(offset.dx, offset.dy);
+    List<Point<double>> initialPoints = List.from(points);
+    bool gotHit = false;
+
+    for (final currentCheckingPoint in initialPoints) {
+      if (currentCheckingPoint.distanceTo(currentPosition) < toleranceRadiusPOI) {
+        gotHit = true;
+        break;
+      }
+    }
+
+    return gotHit ? HitPointPath(this, offset) : null;
   }
 
   @override
@@ -261,8 +274,13 @@ class PathEle extends SketchElement {
 
   @override
   SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
-    // TODO: implement update
-    throw UnimplementedError();
+    final differenceVector = updateOffset - hitPoint.hitOffset;
+    final originalElement = hitPoint.element as PathEle;
+    final originalPoints = originalElement.points;
+    final movementPoint = Point(differenceVector.dx, differenceVector.dy);
+    final updatedPoints = originalPoints.map((element) => element + movementPoint).toIList();
+
+    return PathEle(updatedPoints, color, lineType, strokeWidth);
   }
 }
 
@@ -469,6 +487,8 @@ extension Editable on SketchElement {
     final SketchElement element = this;
     switch (element) {
       case LineEle():
+        return (element.color, element.lineType, element.strokeWidth);
+      case PathEle():
         return (element.color, element.lineType, element.strokeWidth);
       case _:
         return (null, null, null);

@@ -29,6 +29,11 @@ class SketchModeSwitch extends StatelessWidget {
             value: SketchMode.line,
           ),
           ButtonSegment(
+            icon: Icon(Icons.draw_outlined),
+            label: Text("Path Mode"),
+            value: SketchMode.path,
+          ),
+          ButtonSegment(
             icon: Icon(Icons.text_fields),
             label: Text("Text Mode"),
             value: SketchMode.text,

@@ -115,6 +115,13 @@ class SketchController extends ChangeNotifier {
             element.lineType,
             element.strokeWidth,
           );
+        case PathEle():
+          _activeElement = PathEle(
+            element.points,
+            color,
+            element.lineType,
+            element.strokeWidth,
+          );
         case _:
       }
     }
@@ -140,6 +147,13 @@ class SketchController extends ChangeNotifier {
             lineType,
             element.strokeWidth,
           );
+        case PathEle():
+          _activeElement = PathEle(
+            element.points,
+            element.color,
+            lineType,
+            element.strokeWidth,
+          );
         case _:
       }
     }
@@ -161,6 +175,13 @@ class SketchController extends ChangeNotifier {
           _activeElement = LineEle(
             element.start,
             element.end,
+            element.color,
+            element.lineType,
+            strokeWidth,
+          );
+        case PathEle():
+          _activeElement = PathEle(
+            element.points,
             element.color,
             element.lineType,
             strokeWidth,
@@ -308,6 +329,16 @@ class SketchController extends ChangeNotifier {
         notifyListeners();
         break;
       case SketchMode.path:
+        final startPoint = Point(details.localPosition.dx, details.localPosition.dy);
+        _activeElement = PathEle(
+          IList([startPoint]),
+          color,
+          _lineType,
+          _strokeWidth,
+        );
+        notifyListeners();
+        break;
+
       case SketchMode.text:
         final position = Point(details.localPosition.dx, details.localPosition.dy);
         _activeElement = TextEle("text", color, position);
@@ -348,6 +379,23 @@ class SketchController extends ChangeNotifier {
         _updateMagneticLine(details, element, hitPointLine);
         break;
       case SketchMode.path:
+        final element = _activeElement;
+        final isPathElement = element is PathEle;
+        if (element == null || !isPathElement) return;
+
+        final currentPoint = Point(details.localPosition.dx, details.localPosition.dy);
+        _activeElement = PathEle(
+          IList([
+            ...element.points,
+            currentPoint,
+          ]),
+          element.color,
+          element.lineType,
+          element.strokeWidth,
+        );
+
+        notifyListeners();
+        break;
       case SketchMode.text:
       case SketchMode.edit:
         final element = _activeElement;
@@ -360,6 +408,11 @@ class SketchController extends ChangeNotifier {
           case LineEle():
             if (localHitPoint is HitPointLine) {
               _updateMagneticLine(details, element, localHitPoint);
+            }
+          case PathEle():
+            if (localHitPoint is HitPointPath) {
+              _activeElement = element.update(details.localPosition, localHitPoint);
+              notifyListeners();
             }
           case TextEle():
             _activeElement = element.update(
