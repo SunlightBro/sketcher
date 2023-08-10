@@ -485,5 +485,6 @@ class SketchController extends ChangeNotifier {
       case _:
         break;
     }
+    _addChangeToHistory();
   }
 }
