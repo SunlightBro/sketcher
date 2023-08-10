@@ -155,8 +155,8 @@ class _SketchPageState extends State<SketchPage> {
                   children: [
                     Text('Grid Lines:'),
                     Switch(
-                      value: controller.gridLinesEnabled,
-                      onChanged: (value) => controller.gridLinesEnabled = value,
+                      value: controller.isGridLinesEnabled,
+                      onChanged: (value) => controller.isGridLinesEnabled = value,
                     )
                   ],
                 ),

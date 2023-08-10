@@ -28,13 +28,13 @@ class SketchController extends ChangeNotifier {
     Color? color,
     SketchMode? sketchMode,
     double? strokeWidth,
-    bool? gridLinesEnabled,
+    bool? isGridLinesEnabled,
   })  : _history = Queue<IList<SketchElement>>.of(<IList<SketchElement>>[elements]),
         _sketchMode = sketchMode ?? SketchMode.edit,
         _lineType = lineType ?? LineType.full,
         _color = color ?? Colors.black,
         _strokeWidth = strokeWidth ?? 10,
-        _gridLinesEnabled = gridLinesEnabled ?? false;
+        _isGridLinesEnabled = isGridLinesEnabled ?? false;
 
   // ignore: unused_field
   Queue<IList<SketchElement>> _history;
@@ -51,7 +51,7 @@ class SketchController extends ChangeNotifier {
   Color _color;
   LineType _lineType;
   double _strokeWidth;
-  bool _gridLinesEnabled = false;
+  bool _isGridLinesEnabled = false;
   final Color selectionColor;
   final Color gridLinesColor;
 
@@ -71,7 +71,7 @@ class SketchController extends ChangeNotifier {
 
   double get strokeWidth => activeElementStrokeWidth ?? _strokeWidth;
 
-  bool get gridLinesEnabled => _gridLinesEnabled;
+  bool get isGridLinesEnabled => _isGridLinesEnabled;
 
   /// Returns the color of the active/selected element if there is one
   Color? get activeElementColor {
@@ -197,8 +197,8 @@ class SketchController extends ChangeNotifier {
   }
 
   /// Set the boolean value to determine if grid lines should be enabled
-  set gridLinesEnabled(bool isGridActive) {
-    _gridLinesEnabled = isGridActive;
+  set isGridLinesEnabled(bool enabled) {
+    _isGridLinesEnabled = enabled;
     notifyListeners();
   }
 

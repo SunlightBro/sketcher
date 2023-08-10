@@ -63,7 +63,7 @@ class _SketchWidgetState extends State<SketchWidget> {
       },
       child: Stack(
         children: [
-          if (widget.controller.gridLinesEnabled)
+          if (widget.controller.isGridLinesEnabled)
             Positioned.fill(
               child: GridPaper(
                 color: widget.controller.gridLinesColor,
