@@ -36,6 +36,13 @@ class _SketchWidgetState extends State<SketchWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final backgroundImageBytes = widget.controller.backgroundImageBytes;
+    final backgroundImage = backgroundImageBytes != null
+        ? Image.memory(
+            backgroundImageBytes,
+            fit: BoxFit.contain,
+          )
+        : null;
     final magnifierPosition = panPosition;
     return GestureDetector(
       excludeFromSemantics: true,
@@ -60,51 +67,69 @@ class _SketchWidgetState extends State<SketchWidget> {
         setState(() => panPosition = null);
         widget.controller.onPanCancel();
       },
-      child: Stack(
-        children: [
-          if (widget.controller.gridLinesEnabled)
-            Positioned.fill(
-              child: GridPaper(
-                color: widget.controller.gridLinesColor,
-                divisions: 1,
-                subdivisions: 1,
-                interval: 20,
+      child: LayoutBuilder(builder: (context, constraints) {
+        return Stack(
+          children: [
+            if (backgroundImage != null)
+              Positioned.fill(
+                child: backgroundImage,
+              ),
+            if (widget.controller.gridLinesEnabled)
+              Positioned.fill(
+                child: GridPaper(
+                  color: widget.controller.gridLinesColor,
+                  divisions: 1,
+                  subdivisions: 1,
+                  interval: 20,
+                ),
+              ),
+            ConstrainedBox(
+              constraints: backgroundImage != null
+                  ? BoxConstraints.loose(
+                      Size(backgroundImage.width ?? 800, backgroundImage.height ?? 800),
+                    )
+                  : BoxConstraints.loose(
+                      Size(constraints.maxWidth, constraints.maxHeight),
+                    ),
+              child: CustomPaint(
+                size: Size(constraints.maxWidth, constraints.maxHeight),
+                willChange: true,
+                isComplex: true,
+                painter: SketchPainter(
+                  widget.controller.elements,
+                ),
+                foregroundPainter: ActivePainter(
+                  widget.controller.activeElement,
+                ),
+                child: Container(
+                  color: Colors.red.withOpacity(.2),
+                ),
               ),
             ),
-          CustomPaint(
-            willChange: true,
-            isComplex: true,
-            painter: SketchPainter(
-              widget.controller.elements,
-            ),
-            foregroundPainter: ActivePainter(
-              widget.controller.activeElement,
-            ),
-            child: Container(),
-          ),
-          if (magnifierPosition != null)
-            Positioned(
-              left: magnifierPosition.dx,
-              top: magnifierPosition.dy,
-              child: RawMagnifier(
-                decoration: MagnifierDecoration(
-                  shape: CircleBorder(
-                    side: BorderSide(
-                      color: widget.controller.magnifierColor,
-                      width: widget.controller.magnifierBorderWidth,
+            if (magnifierPosition != null)
+              Positioned(
+                left: magnifierPosition.dx,
+                top: magnifierPosition.dy,
+                child: RawMagnifier(
+                  decoration: MagnifierDecoration(
+                    shape: CircleBorder(
+                      side: BorderSide(
+                        color: widget.controller.magnifierColor,
+                        width: widget.controller.magnifierBorderWidth,
+                      ),
                     ),
                   ),
-                ),
-                size: Size.square(widget.controller.magnifierSize),
-                magnificationScale: widget.controller.magnifierScale,
-                focalPointOffset: Offset(
-                  -widget.controller.magnifierSize / 2,
-                  -widget.controller.magnifierSize / 2,
+                  size: Size.square(widget.controller.magnifierSize),
+                  magnificationScale: widget.controller.magnifierScale,
+                  focalPointOffset: Offset(
+                    -widget.controller.magnifierSize / 2,
+                    -widget.controller.magnifierSize / 2,
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 }

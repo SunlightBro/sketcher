@@ -1,5 +1,6 @@
 import 'dart:collection';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
@@ -23,6 +24,7 @@ class SketchController extends ChangeNotifier {
     this.magnifierBorderWidth = 3.0,
     this.magnifierColor = Colors.grey,
     this.gridLinesColor = Colors.grey,
+    this.backgroundImageBytes,
     LineType? lineType,
     Color? color,
     SketchMode? sketchMode,
@@ -51,6 +53,8 @@ class SketchController extends ChangeNotifier {
   bool _gridLinesEnabled = false;
   final Color selectionColor;
   final Color gridLinesColor;
+
+  Uint8List? backgroundImageBytes;
 
   // magnifier properties
   final double magnifierScale;
