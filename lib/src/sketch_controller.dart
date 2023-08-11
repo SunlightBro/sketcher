@@ -25,7 +25,7 @@ class SketchController extends ChangeNotifier {
     this.magnifierColor = Colors.grey,
     this.gridLinesColor = Colors.grey,
     this.onEditText,
-    this.backgroundImageBytes,
+    Uint8List? backgroundImageBytes,
     LineType? lineType,
     Color? color,
     SketchMode? sketchMode,
@@ -36,6 +36,7 @@ class SketchController extends ChangeNotifier {
         _lineType = lineType ?? LineType.full,
         _color = color ?? Colors.black,
         _strokeWidth = strokeWidth ?? 10,
+        _backgroundImageBytes = backgroundImageBytes,
         _isGridLinesEnabled = isGridLinesEnabled ?? false;
 
   // ignore: unused_field
@@ -57,7 +58,7 @@ class SketchController extends ChangeNotifier {
   final Color selectionColor;
   final Color gridLinesColor;
 
-  Uint8List? backgroundImageBytes;
+  Uint8List? _backgroundImageBytes;
   Size? _initialAspectRatio;
 
   // magnifier properties
@@ -79,6 +80,8 @@ class SketchController extends ChangeNotifier {
   bool get isGridLinesEnabled => _isGridLinesEnabled;
 
   Size? get initialAspectRatio => _initialAspectRatio;
+
+  Uint8List? get backgroundImageBytes => _backgroundImageBytes;
 
   /// Returns the color of the active/selected element if there is one
   Color? get activeElementColor {
@@ -214,6 +217,13 @@ class SketchController extends ChangeNotifier {
   set initialAspectRatio(Size? initialAspectRatio) {
     if (_initialAspectRatio != null) return;
     _initialAspectRatio = initialAspectRatio;
+    notifyListeners();
+  }
+
+  /// Set the background image for the sketch area
+  set backgroundImageBytes(Uint8List? backgroundImageBytes) {
+    _backgroundImageBytes = backgroundImageBytes;
+    notifyListeners();
   }
 
   void undo() {
