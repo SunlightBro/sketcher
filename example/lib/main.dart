@@ -5,6 +5,7 @@ import 'package:example/line_type_switch.dart';
 import 'package:example/sketch_mode_switch.dart';
 import 'package:example/stroke_width_switch.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sketch/sketch.dart';
 
 void main() {
@@ -45,6 +46,9 @@ class _SketchPageState extends State<SketchPage> {
       onEditText: onEditTextElement,
     );
     controller.addListener(() => setState(() {}));
+    rootBundle.load('assets/room.jpg').then((data) => setState(
+          () => controller.backgroundImageBytes = data.buffer.asUint8List(),
+        ));
   }
 
   @override

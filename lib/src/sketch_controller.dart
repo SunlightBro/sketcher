@@ -1,5 +1,6 @@
 import 'dart:collection';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
@@ -24,6 +25,7 @@ class SketchController extends ChangeNotifier {
     this.magnifierColor = Colors.grey,
     this.gridLinesColor = Colors.grey,
     this.onEditText,
+    this.backgroundImageBytes,
     LineType? lineType,
     Color? color,
     SketchMode? sketchMode,
@@ -55,6 +57,9 @@ class SketchController extends ChangeNotifier {
   final Color selectionColor;
   final Color gridLinesColor;
 
+  Uint8List? backgroundImageBytes;
+  Size? _initialAspectRatio;
+
   // magnifier properties
   final double magnifierScale;
   final double magnifierSize;
@@ -72,6 +77,8 @@ class SketchController extends ChangeNotifier {
   double get strokeWidth => activeElementStrokeWidth ?? _strokeWidth;
 
   bool get isGridLinesEnabled => _isGridLinesEnabled;
+
+  Size? get initialAspectRatio => _initialAspectRatio;
 
   /// Returns the color of the active/selected element if there is one
   Color? get activeElementColor {
@@ -200,6 +207,13 @@ class SketchController extends ChangeNotifier {
   set isGridLinesEnabled(bool enabled) {
     _isGridLinesEnabled = enabled;
     notifyListeners();
+  }
+
+  /// Set the initial aspect ratio for the sketch area to be able
+  /// to scale the sketch correctly when the aspect ratio changes
+  set initialAspectRatio(Size? initialAspectRatio) {
+    if (_initialAspectRatio != null) return;
+    _initialAspectRatio = initialAspectRatio;
   }
 
   void undo() {
