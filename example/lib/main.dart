@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:example/background_image_switch.dart';
 import 'package:example/color_picker.dart';
 import 'package:example/line_type_switch.dart';
 import 'package:example/sketch_mode_switch.dart';
@@ -37,6 +38,8 @@ final IList<SketchElement> samples = IList([
 
 class _SketchPageState extends State<SketchPage> {
   late SketchController controller;
+  late Uint8List backgroundImageBytesLandscapeImage;
+  late Uint8List backgroundImageBytesPortraitImage;
 
   @override
   void initState() {
@@ -46,8 +49,11 @@ class _SketchPageState extends State<SketchPage> {
       onEditText: onEditTextElement,
     );
     controller.addListener(() => setState(() {}));
+    rootBundle.load('assets/room_landscape.jpg').then((data) => setState(
+          () => backgroundImageBytesLandscapeImage = data.buffer.asUint8List(),
+        ));
     rootBundle.load('assets/room.jpg').then((data) => setState(
-          () => controller.backgroundImageBytes = data.buffer.asUint8List(),
+          () => backgroundImageBytesPortraitImage = data.buffer.asUint8List(),
         ));
   }
 
@@ -102,6 +108,22 @@ class _SketchPageState extends State<SketchPage> {
         },
       );
 
+  void _onSwitchImages(BackgroundImageType backgroundImageType) {
+    setState(() {
+      switch (backgroundImageType) {
+        case BackgroundImageType.none:
+          controller.backgroundImageBytes = null;
+          break;
+        case BackgroundImageType.portrait:
+          controller.backgroundImageBytes = backgroundImageBytesPortraitImage;
+          break;
+        case BackgroundImageType.landscape:
+          controller.backgroundImageBytes = backgroundImageBytesLandscapeImage;
+          break;
+      }
+    });
+  }
+
   void _onSelectSketchMode(SketchMode sketchMode) {
     setState(() {
       controller.sketchMode = sketchMode;
@@ -149,10 +171,32 @@ class _SketchPageState extends State<SketchPage> {
                   onSelectLineType: _onSelectLineType,
                 ),
                 SizedBox(height: 8.0),
-                Text("Stroke Width"),
-                StrokeWidthSwitch(
-                  strokeWidth: controller.strokeWidth,
-                  onSelectStrokeWidth: _onSelectStrokeWidth,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Column(
+                      children: [
+                        Text("Stroke Width"),
+                        StrokeWidthSwitch(
+                          strokeWidth: controller.strokeWidth,
+                          onSelectStrokeWidth: _onSelectStrokeWidth,
+                        ),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        Text("Background Image"),
+                        BackgroundImageSwitch(
+                          onSelectBackgroundImageType: _onSwitchImages,
+                          backgroundImageType: controller.backgroundImageBytes == null
+                              ? BackgroundImageType.none
+                              : controller.backgroundImageBytes == backgroundImageBytesPortraitImage
+                                  ? BackgroundImageType.portrait
+                                  : BackgroundImageType.landscape,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
                 Row(
                   mainAxisSize: MainAxisSize.min,
