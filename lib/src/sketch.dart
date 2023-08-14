@@ -23,7 +23,7 @@ class _SketchWidgetState extends State<SketchWidget> {
   @override
   void initState() {
     super.initState();
-    widget.controller.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) => widget.controller.addListener(() => setState(() {})));
     //_transformationController = TransformationController();
   }
 

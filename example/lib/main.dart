@@ -48,13 +48,16 @@ class _SketchPageState extends State<SketchPage> {
       elements: samples,
       onEditText: onEditTextElement,
     );
-    controller.addListener(() => setState(() {}));
-    rootBundle.load('assets/room_landscape.jpg').then((data) => setState(
-          () => backgroundImageBytesLandscapeImage = data.buffer.asUint8List(),
-        ));
-    rootBundle.load('assets/room.jpg').then((data) => setState(
-          () => backgroundImageBytesPortraitImage = data.buffer.asUint8List(),
-        ));
+
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      rootBundle.load('assets/room_landscape.jpg').then((data) => setState(
+            () => backgroundImageBytesLandscapeImage = data.buffer.asUint8List(),
+          ));
+      rootBundle.load('assets/room.jpg').then((data) => setState(
+            () => backgroundImageBytesPortraitImage = data.buffer.asUint8List(),
+          ));
+      controller.addListener(() => setState(() {}));
+    });
   }
 
   @override
