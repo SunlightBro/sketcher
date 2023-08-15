@@ -484,6 +484,7 @@ class SketchController extends ChangeNotifier {
           if (value != null && value.isNotEmpty) {
             _activeElement = TextEle(value, color, position);
             notifyListeners();
+            _addChangeToHistory();
           }
         });
       // On tap up while edit mode and selected element is text, call onEditText and pass the text element's value
@@ -501,14 +502,15 @@ class SketchController extends ChangeNotifier {
               if (value != null && value.isNotEmpty) {
                 _activeElement = TextEle(value, color, position);
                 notifyListeners();
+                _addChangeToHistory();
               }
             });
           case _:
             break;
         }
       case _:
+        _addChangeToHistory();
         break;
     }
-    _addChangeToHistory();
   }
 }
