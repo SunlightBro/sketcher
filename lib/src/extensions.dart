@@ -1,4 +1,4 @@
-import 'dart:html';
+import 'dart:math';
 import 'dart:ui';
 
 extension PointExt<T extends double> on Point<T> {
