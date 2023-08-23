@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_non_null_assertion
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -5,6 +6,7 @@ import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
 import 'package:sketch/src/dashed_path_painter.dart';
 import 'package:sketch/src/element_modifiers.dart';
+import 'package:sketch/src/extensions.dart';
 
 const double toleranceRadius = 20.0;
 const double toleranceRadiusPOI = 40.0;
@@ -366,17 +368,18 @@ class TextEle extends SketchElement {
 class PolyEle extends SketchElement {
   PolyEle(
     this.points,
-    this.finished,
     this.color,
     this.lineType,
     this.strokeWidth, {
+    this.closed = false,
+    this.activePointIndex,
     this.descriptions,
   });
 
   final IList<Point<double>> points;
 
   /// If start point is same as endpoint (that doesn't get added again to the points list)
-  final bool finished;
+  final bool closed;
 
   /// [LineEle] modifiers
   final ui.Color color;
@@ -390,7 +393,8 @@ class PolyEle extends SketchElement {
   /// optional description
   final IList<String?>? descriptions;
 
-  PolyHitType? _hitTest(Offset position) {}
+  /// Contains the index of the point being updated
+  int? activePointIndex;
 
   @override
   SketchElement create(ui.Offset updateOffset) {
@@ -400,19 +404,154 @@ class PolyEle extends SketchElement {
 
   @override
   void draw(ui.Canvas canvas, ui.Size size, [ui.Color? activeColor]) {
-    // TODO: implement draw
+    final path = ui.Path()..moveTo(points[0].x, points[0].y);
+
+    points
+      ..removeAt(0)
+      ..forEach((p) => path.lineTo(p.x, p.y));
+
+    final currentColor = activeColor ?? color;
+
+    // Close the path if poly is closed
+    if (closed) path.close();
+
+    switch (lineType) {
+      case LineType.dashed:
+      case LineType.dotted:
+        DashedPathPainter(
+          originalPath: path,
+          pathColor: currentColor,
+          strokeWidth: strokeWidth,
+          dashGapLength: strokeWidth * lineType.dashGapLengthFactor,
+          dashLength: strokeWidth * lineType.dashLengthFactor,
+        ).paint(canvas, size);
+      case _:
+        final ui.Paint paint = ui.Paint()
+          ..color = currentColor
+          ..strokeWidth = strokeWidth
+          ..strokeCap = ui.StrokeCap.round
+          ..style = ui.PaintingStyle.stroke;
+
+        canvas.drawPath(path, paint);
+    }
+
+    if (activeColor != null) {
+      _drawActiveElementPoints(canvas: canvas, color: activeColor);
+    }
   }
 
   @override
-  HitPoint? getHit(ui.Offset startOffset) {
-    // TODO: implement getHit
-    throw UnimplementedError();
+  HitPointPoly? getHit(ui.Offset offset) {
+    PolyHitType? polyHitType = _hitTest(offset);
+    return polyHitType != null ? HitPointPoly(this, offset, polyHitType) : null;
   }
 
   @override
   SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
-    // TODO: implement update
-    throw UnimplementedError();
+    if (hitPoint is! HitPointPoly) return this;
+
+    switch (hitPoint.hitType) {
+      case PolyHitType.start:
+      case PolyHitType.midPoints:
+      case PolyHitType.end:
+        final activeIndex = activePointIndex ??
+            points.indexWhere(
+                (element) => element.distanceTo(Point<double>(updateOffset.dx, updateOffset.dy)) < toleranceRadius);
+
+        if (activeIndex == -1) return this;
+
+        final Point<double> newPoint = Point(updateOffset.dx, updateOffset.dy);
+        final newPointList = points.replace(activeIndex, newPoint);
+
+        return PolyEle(newPointList, color, lineType, strokeWidth, activePointIndex: activeIndex, closed: closed);
+
+      case PolyHitType.line:
+        final differenceVector = updateOffset - hitPoint.hitOffset;
+        final originalElement = hitPoint.element as PolyEle;
+        final originalPoints = originalElement.points;
+        final movementPoint = Point(differenceVector.dx, differenceVector.dy);
+        final updatedPoints = originalPoints.map((element) => element + movementPoint).toIList();
+
+        return PolyEle(updatedPoints, color, lineType, strokeWidth, closed: closed);
+    }
+  }
+
+  void _drawActiveElementPoints({required ui.Canvas canvas, required Color color}) {
+    const double activeElementEndRadius = 15.0;
+    final activeElementEndPaint = Paint()..color = color.withOpacity(0.5);
+
+    for (var point in points) {
+      canvas.drawCircle(
+        point.toOffset(),
+        activeElementEndRadius,
+        activeElementEndPaint,
+      );
+    }
+  }
+
+  /// Checks if polyline is hit
+  PolyHitType? _hitTest(Offset position) {
+    final hitPoint = Point<double>(position.dx, position.dy);
+
+    // Check if first/last point of poly was hit
+    final endPointHitType = _getEndPointsHitType(points.first, points.last, hitPoint);
+
+    if (endPointHitType != null) {
+      return endPointHitType;
+    } else if (points.any((element) => element.distanceTo(hitPoint) < toleranceRadiusPOI)) {
+      return PolyHitType.midPoints;
+    } else {
+      // Check if poly was hit between lines
+      List<({Point<double> start, Point<double> end})> linesFromPoly = [];
+      Point<double>? previousPoint;
+
+      for (var point in [...points, if (closed) points.first]) {
+        if (previousPoint != null) {
+          linesFromPoly.add((
+            start: Point<double>(previousPoint.x, previousPoint.y),
+            end: Point<double>(point.x, point.y),
+          ));
+        }
+        previousPoint = point;
+      }
+
+      final isBetweenPoints = linesFromPoly.any((element) => _isBetweenPoints(element.start, element.end, hitPoint));
+
+      return isBetweenPoints ? PolyHitType.line : null;
+    }
+  }
+
+  /// Returns PolyHitType.start if startPoint is hit
+  /// Returns PolyHitType.end if endPoint is hit
+  /// else, return null
+  PolyHitType? _getEndPointsHitType(Point<double> startPoint, Point<double> endPoint, Point<double> hitPoint) {
+    final a = startPoint.distanceTo(hitPoint);
+    final b = endPoint.distanceTo(hitPoint);
+    final c = startPoint.distanceTo(endPoint);
+
+    final startGotHit = (a < toleranceRadiusPOI || pow(b, 2) > pow(a, 2) + pow(c, 2)) && a < toleranceRadiusPOI;
+    final endGotHit = (b < toleranceRadiusPOI || pow(a, 2) > pow(b, 2) + pow(c, 2)) && b < toleranceRadiusPOI;
+
+    if (!startGotHit && !endGotHit) {
+      return null;
+    } else {
+      return startGotHit ? PolyHitType.start : PolyHitType.end;
+    }
+  }
+
+  /// Returns true if polyLine is hit between points
+  bool _isBetweenPoints(Point<double> point1, Point<double> point2, Point<double> currentPoint) {
+    double distanceToPoint1 = _getDistanceBetweenPoints(currentPoint, point1);
+    double distanceToPoint2 = _getDistanceBetweenPoints(currentPoint, point2);
+    double lineLength = _getDistanceBetweenPoints(point1, point2);
+
+    return distanceToPoint1 + distanceToPoint2 <= lineLength + toleranceRadius;
+  }
+
+  double _getDistanceBetweenPoints(Point<double> p1, Point<double> p2) {
+    double dx = p1.x - p2.x;
+    double dy = p1.y - p2.y;
+    return sqrt(dx * dx + dy * dy);
   }
 }
 
@@ -478,7 +617,7 @@ class HitPointText extends HitPoint {
 
 enum LineHitType { start, end, line }
 
-enum PolyHitType { point, line }
+enum PolyHitType { start, end, line, midPoints }
 
 extension Editable on SketchElement {
   /// Returns values for element that are editable
@@ -489,6 +628,8 @@ extension Editable on SketchElement {
       case LineEle():
         return (element.color, element.lineType, element.strokeWidth);
       case PathEle():
+        return (element.color, element.lineType, element.strokeWidth);
+      case PolyEle():
         return (element.color, element.lineType, element.strokeWidth);
       case _:
         return (null, null, null);

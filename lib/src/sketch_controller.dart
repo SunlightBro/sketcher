@@ -7,6 +7,7 @@ import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
 import 'package:sketch/src/element_modifiers.dart';
 import 'package:sketch/src/elements.dart';
+import 'package:sketch/src/extensions.dart';
 
 enum SketchMode {
   line,
@@ -135,6 +136,14 @@ class SketchController extends ChangeNotifier {
             element.lineType,
             element.strokeWidth,
           );
+        case PolyEle():
+          _activeElement = PolyEle(
+            element.points,
+            color,
+            element.lineType,
+            element.strokeWidth,
+            closed: element.closed,
+          );
         case _:
       }
     }
@@ -167,6 +176,14 @@ class SketchController extends ChangeNotifier {
             lineType,
             element.strokeWidth,
           );
+        case PolyEle():
+          _activeElement = PolyEle(
+            element.points,
+            element.color,
+            lineType,
+            element.strokeWidth,
+            closed: element.closed,
+          );
         case _:
       }
     }
@@ -198,6 +215,14 @@ class SketchController extends ChangeNotifier {
             element.color,
             element.lineType,
             strokeWidth,
+          );
+        case PolyEle():
+          _activeElement = PolyEle(
+            element.points,
+            element.color,
+            element.lineType,
+            strokeWidth,
+            closed: element.closed,
           );
         case _:
       }
@@ -242,6 +267,10 @@ class SketchController extends ChangeNotifier {
   void _addChangeToHistory() {
     // add activeElement to all elements
     final element = _activeElement;
+
+    // TODO(Jayvee) : Remove when a better implementation for activePointIndex is applied
+    if (element is PolyEle) element.activePointIndex = null;
+
     final allElements = element == null ? elements : elements.add(element);
 
     // save a history entry only if the current elements list differs from the last
@@ -316,29 +345,47 @@ class SketchController extends ChangeNotifier {
     }
   }
 
+  /// Upon drag update, snaps the point of a line to the nearest endpoint of a poly within the tolerance radius
+  /// If the point of line goes on the midpoints/line, no snapping will happen
+  void _updateMagneticLineToPoly(
+      DragUpdateDetails details, LineEle activeLineElement, HitPointLine hitPointLine, PolyEle polyElement) {
+    final touchedPolyHitPoint = polyElement.getHit(details.localPosition) as HitPointPoly;
+    final polyStartPoint = polyElement.points.first;
+    final polyEndPoint = polyElement.points.last;
+    final startPointHit = polyStartPoint.distanceTo(details.localPosition.toPoint()) < toleranceRadiusPOI;
+
+    switch (touchedPolyHitPoint.hitType) {
+      case PolyHitType.line:
+        _activeElement = activeLineElement.update(details.localPosition, hitPointLine);
+        break;
+      case PolyHitType.midPoints:
+        final nearestMidPoint = polyElement.points
+            .firstWhereOrNull((element) => element.distanceTo(details.localPosition.toPoint()) < toleranceRadius);
+        if (nearestMidPoint != null) {
+          _activeElement = activeLineElement.update(nearestMidPoint.toOffset(), hitPointLine);
+        }
+      case PolyHitType.start:
+      case PolyHitType.end:
+        final targetPoint = startPointHit ? polyStartPoint.toOffset() : polyEndPoint.toOffset();
+        _activeElement = activeLineElement.update(targetPoint, hitPointLine);
+        break;
+    }
+  }
+
   /// Updates the active element with the new position and snaps
   /// the line to the nearest line if it is close enough
-  void _updateMagneticLine(DragUpdateDetails details, SketchElement element, HitPointLine hitPointLine) {
-    final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
-    if (touchedElement == null || touchedElement is! LineEle) {
-      // update line end
-      _activeElement = element.update(
-        details.localPosition,
-        hitPointLine,
-      );
-    } else {
-      // calculate nearest point on line and snap the line end to that point
-      final nearestPoint = _findNearestPointOnLine(
-        touchedElement.start,
-        touchedElement.end,
-        details.localPosition,
-      );
-      _activeElement = element.update(
-        Offset(nearestPoint.x, nearestPoint.y),
-        hitPointLine,
-      );
-    }
-    notifyListeners();
+  void _updateMagneticLine(
+      DragUpdateDetails details, SketchElement element, HitPointLine hitPointLine, LineEle lineEle) {
+    final nearestPoint = _findNearestPointOnLine(
+      lineEle.start,
+      lineEle.end,
+      details.localPosition,
+    );
+
+    _activeElement = element.update(
+      nearestPoint.toOffset(),
+      hitPointLine,
+    );
   }
 
   void onPanDown(DragDownDetails details) {
@@ -402,7 +449,19 @@ class SketchController extends ChangeNotifier {
           Offset.zero, // doesn't get used
           LineHitType.end,
         );
-        _updateMagneticLine(details, element, hitPointLine);
+
+        final touchedElement = elements.firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
+        if (touchedElement is LineEle) {
+          _updateMagneticLine(details, element, hitPointLine, touchedElement);
+        } else if (touchedElement is PolyEle) {
+          _updateMagneticLineToPoly(details, element as LineEle, hitPointLine, touchedElement);
+        } else {
+          _activeElement = element.update(
+            details.localPosition,
+            hitPointLine,
+          );
+        }
+        notifyListeners();
         break;
       case SketchMode.path:
         final element = _activeElement;
@@ -433,11 +492,59 @@ class SketchController extends ChangeNotifier {
         switch (element) {
           case LineEle():
             if (localHitPoint is HitPointLine) {
-              _updateMagneticLine(details, element, localHitPoint);
+              final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
+              if (touchedElement is LineEle) {
+                _updateMagneticLine(details, element, localHitPoint, touchedElement);
+              } else if (touchedElement is PolyEle) {
+                _updateMagneticLineToPoly(details, element, localHitPoint, touchedElement);
+              } else {
+                _activeElement = element.update(
+                  details.localPosition,
+                  localHitPoint,
+                );
+              }
+
+              notifyListeners();
             }
           case PathEle():
             if (localHitPoint is HitPointPath) {
               _activeElement = element.update(details.localPosition, localHitPoint);
+              notifyListeners();
+            }
+          case PolyEle():
+            if (localHitPoint is HitPointPoly) {
+              final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(details.localPosition) != null);
+
+              /// Poly merging to itself
+              if (touchedElement == null) {
+                final activePointIndex = element.activePointIndex;
+                final selectedPoint =
+                    activePointIndex != null ? element.points.get(activePointIndex, orElse: null) : null;
+                final firstElement = element.points.first;
+                final lastElement = element.points.last;
+
+                // If there is no selected point, or if there are only 3 points, we only update the active Elements normally
+                if (selectedPoint == null || element.points.length <= 3) {
+                  _activeElement = element.update(details.localPosition, localHitPoint);
+                } else {
+                  // If start and end point meet within the toleranceRadius, snap it to each other and update activeElement
+                  final isStart = selectedPoint == element.points.first;
+                  final isEnd = selectedPoint == element.points.last;
+                  final localPoint = details.localPosition.toPoint();
+
+                  if ((isStart && localPoint.distanceTo(lastElement) < toleranceRadius) ||
+                      (isEnd && localPoint.distanceTo(firstElement) < toleranceRadius)) {
+                    final updatedPoint = isEnd ? firstElement : lastElement;
+                    _activeElement = element.update(updatedPoint.toOffset(), localHitPoint) as PolyEle;
+                  } else {
+                    _activeElement = element.update(details.localPosition, localHitPoint);
+                  }
+                }
+              } else if (touchedElement is PolyEle) {
+                _handlePolyToPolyMerging(element, touchedElement, details, localHitPoint);
+              } else if (touchedElement is LineEle) {
+                _handlePolyToLineMerging(element, touchedElement, details, localHitPoint);
+              }
               notifyListeners();
             }
           case TextEle():
@@ -447,14 +554,126 @@ class SketchController extends ChangeNotifier {
             );
             notifyListeners();
             break;
-          case _:
         }
+    }
+  }
+
+  /// Poly to Poly can only merge on their endpoints
+  void _handlePolyToPolyMerging(
+      PolyEle element, PolyEle touchedElement, DragUpdateDetails details, HitPoint localHitPoint) {
+    final hitPointLine = touchedElement.getHit(details.localPosition);
+    if (hitPointLine == null) return;
+    final hitType = hitPointLine.hitType;
+
+    switch (hitType) {
+      case PolyHitType.line:
+        _activeElement = element.update(details.localPosition, localHitPoint);
+      case PolyHitType.midPoints:
+        final nearestMidPoint = touchedElement.points
+            .firstWhereOrNull((element) => element.distanceTo(details.localPosition.toPoint()) < toleranceRadius);
+        if (nearestMidPoint != null) {
+          _activeElement = element.update(nearestMidPoint.toOffset(), hitPointLine);
+        }
+      case PolyHitType.start:
+      case PolyHitType.end:
+        final newPoint =
+            hitPointLine.hitType == PolyHitType.start ? touchedElement.points.first : touchedElement.points.last;
+        _activeElement = element.update(newPoint.toOffset(), localHitPoint) as PolyEle;
+    }
+  }
+
+  void _handlePolyToLineMerging(
+      PolyEle activePolyElement, LineEle lineElement, DragUpdateDetails details, HitPoint localHitPoint) {
+    final hitPointLine = lineElement.getHit(details.localPosition);
+    if (hitPointLine == null) return;
+    final hitType = hitPointLine.hitType;
+
+    if (hitType == LineHitType.line) {
+      _activeElement = activePolyElement.update(details.localPosition, localHitPoint);
+    } else {
+      final newPoint = hitPointLine.hitType == LineHitType.start ? lineElement.start : lineElement.end;
+      _activeElement = activePolyElement.update(newPoint.toOffset(), localHitPoint) as PolyEle;
+    }
+  }
+
+  List<Point<double>>? _onMergeTwoLines(
+    Point<double> line1Start,
+    Point<double> line1End,
+    Point<double> line2Start,
+    Point<double> line2End,
+  ) {
+    List<Point<double>>? createMergedList(Point<double> a, Point<double> b, Point<double> c) => [a, b, c];
+
+    if (line1Start == line2Start) {
+      return createMergedList(line2End, line1Start, line1End);
+    } else if (line1End == line2End) {
+      return createMergedList(line1Start, line2End, line2Start);
+    } else if (line1Start == line2End) {
+      return createMergedList(line1End, line1Start, line2Start);
+    } else if (line2Start == line1End) {
+      return createMergedList(line1Start, line2Start, line2End);
+    }
+
+    return null;
+  }
+
+  void _checkMergeLine(DragEndDetails details, LineEle lineElement, HitPointLine hitPointLine) {
+    final touchedElement =
+        elements.reversed.where((element) => element is LineEle || element is PolyEle).firstWhereOrNull((e) {
+      return e.getHit(lineElement.start.toOffset()) != null || e.getHit(lineElement.end.toOffset()) != null;
+    });
+
+    if (touchedElement is LineEle) {
+      final points = _onMergeTwoLines(touchedElement.start, touchedElement.end, lineElement.start, lineElement.end);
+
+      if (points != null) {
+        elements = elements.removeAll([touchedElement, lineElement]);
+        _activeElement = PolyEle(IList(points), color, lineType, strokeWidth);
+      }
+      notifyListeners();
+    } else if (touchedElement is PolyEle && !touchedElement.closed) {
+      final newPoints = _onMergePolyAndLine(touchedElement, lineElement);
+      if (newPoints != null) {
+        elements = elements.removeAll([touchedElement, lineElement]);
+        _activeElement = PolyEle(newPoints, color, lineType, strokeWidth, closed: touchedElement.closed);
+        notifyListeners();
+      }
+    }
+  }
+
+  IList<Point<double>>? _onMergePolyAndLine(PolyEle polyLine, LineEle line) {
+    final activeElementPoints = [
+      line.start,
+      line.end,
+    ];
+
+    final polyStartPoint = polyLine.points.first;
+    final polyEndPoint = polyLine.points.last;
+
+    if (activeElementPoints.contains(polyStartPoint)) {
+      final newPoint = line.start == polyStartPoint ? line.end : line.start;
+      return IList([newPoint, ...polyLine.points]);
+    } else if (activeElementPoints.contains(polyEndPoint)) {
+      final newPoint = line.start == polyEndPoint ? line.end : line.start;
+      return IList([...polyLine.points, newPoint]);
+    } else {
+      return null;
     }
   }
 
   void onPanEnd(DragEndDetails details) {
     switch (sketchMode) {
       case SketchMode.line:
+        final element = _activeElement;
+        if (element == null) return;
+        final hitPointLine = HitPointLine(
+          element, // doesn't get used
+          Offset.zero, // doesn't get used
+          LineHitType.end,
+        );
+
+        _checkMergeLine(details, element as LineEle, hitPointLine);
+
         deactivateActiveElement();
         break;
       case SketchMode.path:
@@ -462,7 +681,55 @@ class SketchController extends ChangeNotifier {
         // deselect painted element in non-edit mode after painting is done
         deactivateActiveElement();
       case SketchMode.edit:
+        final element = _activeElement;
+
+        /// Handle merging of PolyEle on pan end
+        if (element is PolyEle && !element.closed) {
+          final touchedElement = elements.firstWhereOrNull((e) {
+            if (e is PolyEle || e is LineEle) {
+              final startPointHit = e.getHit(element.points.first.toOffset()) != null;
+              final endPointHit = e.getHit(element.points.last.toOffset()) != null;
+              return startPointHit || endPointHit;
+            }
+            return false;
+          });
+
+          IList<Point<double>>? newPoints;
+
+          if (touchedElement is PolyEle && !touchedElement.closed) {
+            final firstPointsMatched = touchedElement.points.first == element.points.first;
+            final lastPointsMatched = touchedElement.points.last == element.points.last;
+
+            if (firstPointsMatched || lastPointsMatched) {
+              final reversedElementPoints = firstPointsMatched ? element.points.reversed : element.points;
+              final reversedTouchedPoints = firstPointsMatched ? touchedElement.points : touchedElement.points.reversed;
+              newPoints = IList([...reversedElementPoints, ...reversedTouchedPoints]);
+            } else if (touchedElement.points.first == element.points.last) {
+              newPoints = IList([...element.points, ...touchedElement.points]);
+            } else if (touchedElement.points.last == element.points.first) {
+              newPoints = IList([...touchedElement.points, ...element.points]);
+            }
+          } else if (touchedElement is LineEle) {
+            final points = _onMergePolyAndLine(element, touchedElement);
+            if (points != null) newPoints = points;
+          }
+
+          if (touchedElement != null && newPoints != null) elements = elements.remove(touchedElement);
+
+          newPoints ??= element.points;
+          final isClosed = newPoints.first == newPoints.last || element.closed;
+
+          _activeElement = PolyEle(newPoints.removeDuplicates(), color, lineType, strokeWidth, closed: isClosed);
+        } else if (element is LineEle) {
+          final hitPointLine = HitPointLine(
+            element, // doesn't get used
+            Offset.zero, // doesn't get used
+            LineHitType.end,
+          );
+          _checkMergeLine(details, element, hitPointLine);
+        }
     }
+
     _addChangeToHistory();
   }
 
