@@ -56,6 +56,7 @@ class SketchController extends ChangeNotifier {
   LineType _lineType;
   double _strokeWidth;
   bool _isGridLinesEnabled = false;
+
   final Color selectionColor;
   final Color gridLinesColor;
 
@@ -67,6 +68,10 @@ class SketchController extends ChangeNotifier {
   final double magnifierSize;
   final double magnifierBorderWidth;
   final Color magnifierColor;
+
+  /// Note: Workaround. Remove when adding of text programmatically is improved.
+  /// Used to identify the position of the text to be added using [addTextElement]
+  int _addedTextElementCount = 0;
 
   SketchElement? get activeElement => _activeElement;
 
@@ -298,6 +303,35 @@ class SketchController extends ChangeNotifier {
     _activeElement = null;
     _addChangeToHistory();
     notifyListeners();
+  }
+
+  /// Add a [text] element to the sketch
+  /// If [position] is null, get the text element using [_getTextElementPosition]
+  /// Increment [_addedTextElementCount] after adding a text element
+  void addTextElement(String? text, {Point<double>? position}) {
+    deactivateActiveElement();
+    if (text != null && text.isNotEmpty) {
+      final textPosition = position ?? _getTextElementPosition();
+
+      _activeElement = TextEle(text, color, textPosition);
+      _addedTextElementCount++;
+
+      notifyListeners();
+      _addChangeToHistory();
+    }
+  }
+
+  /// Position the text based on addedTextElementCount
+  /// it will start from the top left of the screen, going down
+  /// It will move the text position to the next column every 10 texts
+  Point<double> _getTextElementPosition() {
+    final divValue = _addedTextElementCount ~/ 10;
+    final modValue = _addedTextElementCount % 10;
+
+    final x = (divValue + 1) * 40.0;
+    final y = (modValue + 1) * 20.0;
+
+    return Point<double>(x, y);
   }
 
   /// Finds the nearest point on a line defined by two points (p1 and p2)

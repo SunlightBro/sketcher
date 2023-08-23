@@ -161,6 +161,10 @@ class _SketchPageState extends State<SketchPage> {
                   sketchMode: controller.sketchMode,
                   onSelectSketchMode: _onSelectSketchMode,
                 ),
+                TextButton(
+                  onPressed: () => controller.addTextElement('Sample Text'),
+                  child: Text('Add text Element'),
+                ),
                 SizedBox(height: 8.0),
                 Text("Color"),
                 ColorPicker(

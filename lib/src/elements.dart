@@ -456,7 +456,7 @@ class PolyEle extends SketchElement {
       case PolyHitType.end:
         final activeIndex = activePointIndex ??
             points.indexWhere(
-                (element) => element.distanceTo(Point<double>(updateOffset.dx, updateOffset.dy)) < toleranceRadius);
+                (element) => element.distanceTo(Point<double>(updateOffset.dx, updateOffset.dy)) < toleranceRadiusPOI);
 
         if (activeIndex == -1) return this;
 
