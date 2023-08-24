@@ -103,8 +103,8 @@ class _SketchWidgetState extends State<SketchWidget> {
               ),
               if (magnifierPosition != null)
                 Positioned(
-                  left: magnifierPosition.dx,
-                  top: magnifierPosition.dy,
+                  left: magnifierPosition.dx - 100,
+                  top: magnifierPosition.dy - 100,
                   child: RawMagnifier(
                     decoration: MagnifierDecoration(
                       shape: CircleBorder(
@@ -117,8 +117,8 @@ class _SketchWidgetState extends State<SketchWidget> {
                     size: Size.square(widget.controller.magnifierSize),
                     magnificationScale: widget.controller.magnifierScale,
                     focalPointOffset: Offset(
-                      -widget.controller.magnifierSize / 2,
-                      -widget.controller.magnifierSize / 2,
+                      widget.controller.magnifierSize / 2,
+                      widget.controller.magnifierSize / 2,
                     ),
                   ),
                 ),
