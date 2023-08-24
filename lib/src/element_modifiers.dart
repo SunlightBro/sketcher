@@ -4,7 +4,9 @@ enum LineType {
   dotted,
   arrowStart,
   arrowEnd,
-  arrowBetween,
+  arrowBetween;
+
+  bool get isArrow => this == LineType.arrowStart || this == LineType.arrowBetween || this == LineType.arrowEnd;
 }
 
 extension LineTypeExt on LineType {

@@ -182,12 +182,13 @@ class SketchController extends ChangeNotifier {
             element.strokeWidth,
           );
         case PolyEle():
+          final isClosed = element.closed;
           _activeElement = PolyEle(
             element.points,
             element.color,
-            lineType,
+            isClosed && lineType.isArrow ? element.lineType : lineType,
             element.strokeWidth,
-            closed: element.closed,
+            closed: isClosed,
           );
         case _:
       }
@@ -755,7 +756,13 @@ class SketchController extends ChangeNotifier {
           newPoints ??= element.points;
           final isClosed = newPoints.first == newPoints.last || element.closed;
 
-          _activeElement = PolyEle(newPoints.removeDuplicates(), color, lineType, strokeWidth, closed: isClosed);
+          _activeElement = PolyEle(
+            newPoints.removeDuplicates(),
+            color,
+            isClosed && lineType.isArrow ? LineType.full : lineType,
+            strokeWidth,
+            closed: isClosed,
+          );
         } else if (element is LineEle) {
           final hitPointLine = HitPointLine(
             element, // doesn't get used
