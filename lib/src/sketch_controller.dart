@@ -578,6 +578,8 @@ class SketchController extends ChangeNotifier {
                 _handlePolyToPolyMerging(element, touchedElement, details, localHitPoint);
               } else if (touchedElement is LineEle) {
                 _handlePolyToLineMerging(element, touchedElement, details, localHitPoint);
+              } else {
+                _activeElement = element.update(details.localPosition, localHitPoint);
               }
               notifyListeners();
             }
