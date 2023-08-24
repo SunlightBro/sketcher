@@ -13,6 +13,34 @@ const double toleranceRadiusPOI = 40.0;
 
 sealed class SketchElement with Drawable, Hitable {}
 
+/// Draws an arrow head at the given point [arrowHeadPoint]
+void _drawArrowHead({
+  required ui.Paint paint,
+  required ui.Canvas canvas,
+  required Point<double> arrowHeadPoint,
+  required Point<double> arrowTailPoint,
+}) {
+  Point<double> arrowPoint = arrowHeadPoint - arrowTailPoint;
+
+  final angle = atan2(arrowPoint.y, arrowPoint.x);
+
+  // dimensions of arrowhead
+  final arrowSize = 15;
+  final arrowAngle = 25 * pi / 180;
+
+  /// Create arrow path
+  final path = Path();
+  path.moveTo(
+      arrowHeadPoint.x - arrowSize * cos(angle - arrowAngle), arrowHeadPoint.y - arrowSize * sin(angle - arrowAngle));
+  path.lineTo(arrowHeadPoint.x, arrowHeadPoint.y);
+  path.lineTo(
+      arrowHeadPoint.x - arrowSize * cos(angle + arrowAngle), arrowHeadPoint.y - arrowSize * sin(angle + arrowAngle));
+  path.close();
+
+  // draw arrow
+  canvas.drawPath(path, paint);
+}
+
 class LineEle extends SketchElement {
   LineEle(
     this.start,
@@ -66,34 +94,6 @@ class LineEle extends SketchElement {
     );
   }
 
-  /// Draws an arrow (full line and arrowhead) at the given point [arrowAt]
-  void _drawArrow(
-    Point<double> arrowAt, {
-    required ui.Canvas canvas,
-    Color? activeColor,
-  }) {
-    final ui.Paint paint = _getLineTypeFullPaint(activeColor);
-
-    // direction of arrowhead
-    final dX = arrowAt == end ? end.x - start.x : start.x - end.x;
-    final dY = arrowAt == end ? end.y - start.y : start.y - end.y;
-    final angle = atan2(dY, dX);
-
-    // dimensions of arrowhead
-    final arrowSize = 15;
-    final arrowAngle = 25 * pi / 180;
-
-    final path = Path();
-    path.moveTo(arrowAt.x - arrowSize * cos(angle - arrowAngle), arrowAt.y - arrowSize * sin(angle - arrowAngle));
-    path.lineTo(arrowAt.x, arrowAt.y);
-    path.lineTo(arrowAt.x - arrowSize * cos(angle + arrowAngle), arrowAt.y - arrowSize * sin(angle + arrowAngle));
-    path.close();
-    // draw arrow
-    canvas.drawPath(path, paint);
-    // draw full line
-    _drawFullLine(canvas: canvas, activeColor: activeColor);
-  }
-
   /// Draws a full line
   void _drawFullLine({required ui.Canvas canvas, Color? activeColor}) {
     final ui.Paint paint = _getLineTypeFullPaint(activeColor);
@@ -122,14 +122,24 @@ class LineEle extends SketchElement {
       case LineType.full:
         _drawFullLine(canvas: canvas, activeColor: activeColor);
       case LineType.arrowBetween:
-        _drawArrow(end, canvas: canvas, activeColor: activeColor);
-        _drawArrow(start, canvas: canvas, activeColor: activeColor);
-        break;
-      case LineType.arrowEnd:
-        _drawArrow(end, canvas: canvas, activeColor: activeColor);
-        break;
       case LineType.arrowStart:
-        _drawArrow(start, canvas: canvas, activeColor: activeColor);
+      case LineType.arrowEnd:
+        final ui.Paint paint = _getLineTypeFullPaint(activeColor);
+
+        if (lineType == LineType.arrowBetween) {
+          _drawArrowHead(paint: paint, canvas: canvas, arrowHeadPoint: start, arrowTailPoint: end);
+          _drawArrowHead(paint: paint, canvas: canvas, arrowHeadPoint: end, arrowTailPoint: start);
+        } else if (lineType == LineType.arrowStart || lineType == LineType.arrowEnd) {
+          final isLineEnd = lineType == LineType.arrowEnd;
+          _drawArrowHead(
+            paint: paint,
+            canvas: canvas,
+            arrowHeadPoint: isLineEnd ? end : start,
+            arrowTailPoint: isLineEnd ? start : end,
+          );
+        }
+
+        _drawFullLine(canvas: canvas, activeColor: activeColor);
         break;
     }
     if (activeColor != null) {
@@ -425,7 +435,7 @@ class PolyEle extends SketchElement {
           dashGapLength: strokeWidth * lineType.dashGapLengthFactor,
           dashLength: strokeWidth * lineType.dashLengthFactor,
         ).paint(canvas, size);
-      case _:
+      case LineType.full:
         final ui.Paint paint = ui.Paint()
           ..color = currentColor
           ..strokeWidth = strokeWidth
@@ -433,6 +443,32 @@ class PolyEle extends SketchElement {
           ..style = ui.PaintingStyle.stroke;
 
         canvas.drawPath(path, paint);
+      case LineType.arrowBetween:
+      case LineType.arrowEnd:
+      case LineType.arrowStart:
+        final ui.Paint paint = ui.Paint()
+          ..color = currentColor
+          ..strokeWidth = strokeWidth
+          ..strokeCap = ui.StrokeCap.round
+          ..style = ui.PaintingStyle.stroke;
+
+        if (lineType == LineType.arrowBetween) {
+          _drawArrowHead(paint: paint, canvas: canvas, arrowHeadPoint: points.first, arrowTailPoint: points[1]);
+          _drawArrowHead(paint: paint, canvas: canvas, arrowHeadPoint: points.last, arrowTailPoint: points.reversed[1]);
+        } else if (lineType == LineType.arrowStart || lineType == LineType.arrowEnd) {
+          final isLineEnd = lineType == LineType.arrowEnd;
+          _drawArrowHead(
+            paint: paint,
+            canvas: canvas,
+            arrowHeadPoint: isLineEnd ? points.last : points.first,
+            arrowTailPoint: isLineEnd ? points.reversed[1] : points[1],
+          );
+        }
+
+        // draw the poly lines path
+        canvas.drawPath(path, paint);
+
+        break;
     }
 
     if (activeColor != null) {
