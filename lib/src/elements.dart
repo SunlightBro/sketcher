@@ -256,7 +256,8 @@ class PathEle extends SketchElement {
           ..color = currentColor
           ..strokeWidth = strokeWidth
           ..strokeCap = ui.StrokeCap.round
-          ..style = ui.PaintingStyle.stroke;
+          ..style = ui.PaintingStyle.stroke
+          ..strokeJoin = StrokeJoin.round;
         canvas.drawPath(path, paint);
     }
   }
@@ -440,7 +441,8 @@ class PolyEle extends SketchElement {
           ..color = currentColor
           ..strokeWidth = strokeWidth
           ..strokeCap = ui.StrokeCap.round
-          ..style = ui.PaintingStyle.stroke;
+          ..style = ui.PaintingStyle.stroke
+          ..strokeJoin = StrokeJoin.round;
 
         canvas.drawPath(path, paint);
       case LineType.arrowBetween:

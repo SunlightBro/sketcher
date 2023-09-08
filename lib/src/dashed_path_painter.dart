@@ -32,7 +32,8 @@ class DashedPathPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..color = pathColor
-        ..strokeWidth = strokeWidth,
+        ..strokeWidth = strokeWidth
+        ..strokeJoin = StrokeJoin.round,
     );
   }
 
