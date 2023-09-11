@@ -21,7 +21,7 @@ class SketchController extends ChangeNotifier {
     this.elements = const IListConst([]),
     this.selectionColor = Colors.orange,
     this.magnifierScale = 1.5,
-    this.magnifierSize = 100,
+    this.magnifierSize = 150,
     this.magnifierBorderWidth = 3.0,
     this.magnifierColor = Colors.grey,
     this.gridLinesColor = Colors.grey,

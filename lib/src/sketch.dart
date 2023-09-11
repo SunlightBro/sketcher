@@ -103,8 +103,8 @@ class _SketchWidgetState extends State<SketchWidget> {
               ),
               if (magnifierPosition != null)
                 Positioned(
-                  left: magnifierPosition.dx - 100,
-                  top: magnifierPosition.dy - 100,
+                  left: magnifierPosition.dx - widget.controller.magnifierSize,
+                  top: magnifierPosition.dy - widget.controller.magnifierSize,
                   child: RawMagnifier(
                     decoration: MagnifierDecoration(
                       shape: CircleBorder(
