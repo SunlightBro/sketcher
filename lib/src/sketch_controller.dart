@@ -777,11 +777,9 @@ class SketchController extends ChangeNotifier {
   }
 
   void onPanCancel() {
-    switch (sketchMode) {
-      case SketchMode.line:
-      case SketchMode.path:
-      case SketchMode.text:
-      case SketchMode.edit:
+    if (sketchMode != SketchMode.edit) {
+      deactivateActiveElement();
+      notifyListeners();
     }
   }
 
