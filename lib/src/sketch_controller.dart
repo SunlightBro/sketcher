@@ -16,6 +16,9 @@ enum SketchMode {
   edit,
 }
 
+/// Max number of rows for the auto added text elements
+const _maxAutoAddTextLength = 6;
+
 class SketchController extends ChangeNotifier {
   SketchController({
     this.elements = const IListConst([]),
@@ -68,10 +71,6 @@ class SketchController extends ChangeNotifier {
   final double magnifierSize;
   final double magnifierBorderWidth;
   final Color magnifierColor;
-
-  /// Note: Workaround. Remove when adding of text programmatically is improved.
-  /// Used to identify the position of the text to be added using [addTextElement]
-  int _addedTextElementCount = 0;
 
   SketchElement? get activeElement => _activeElement;
 
@@ -307,32 +306,70 @@ class SketchController extends ChangeNotifier {
   }
 
   /// Add a [text] element to the sketch
-  /// If [position] is null, get the text element using [_getTextElementPosition]
-  /// Increment [_addedTextElementCount] after adding a text element
+  /// If [position] is null, position it on the center of the sketch
+  /// Move the other automatically added texts unto the top of the new text until it reaches the [_maxAutoAddTextLength]
+  /// Replace [_autoAddedTextElements] value with the new text and the repositioned texts
   void addTextElement(String? text, {Point<double>? position}) {
     deactivateActiveElement();
     if (text != null && text.isNotEmpty) {
-      final textPosition = position ?? _getTextElementPosition();
+      final center = (initialAspectRatio ?? Size(0, 0)) / 2;
+      final textPosition = position ?? Point<double>(center.width, center.height);
+      final textEle = TextEle(text, color, textPosition, hasComputedPosition: true);
 
-      _activeElement = TextEle(text, color, textPosition);
-      _addedTextElementCount++;
+      // Assign it as the current active element
+      _activeElement = textEle;
+
+      // Separate the autoAddedTextElements from all the other elements
+      final separatedElementsRecord =
+          elements.fold<({List<SketchElement> otherElements, List<TextEle> autoAddedTextElements})>(
+        (otherElements: [], autoAddedTextElements: []),
+        (previousValue, element) {
+          if (element is! TextEle || !element.hasComputedPosition) {
+            return previousValue..otherElements.add(element);
+          } else {
+            return previousValue..autoAddedTextElements.add(element);
+          }
+        },
+      );
+
+      // Reposition the autoAddedTextElements to be pushed on top of the newly added text element
+      final repositionedAutoAddedText =
+          _repositionAutoAddedTexts(center, separatedElementsRecord.autoAddedTextElements.reversedView);
+
+      elements = IList([
+        ...separatedElementsRecord.otherElements,
+        ...repositionedAutoAddedText.reversedView,
+      ]);
 
       notifyListeners();
       _addChangeToHistory();
     }
   }
 
-  /// Position the text based on addedTextElementCount
-  /// it will start from the top left of the screen, going down
-  /// It will move the text position to the next column every 10 texts
-  Point<double> _getTextElementPosition() {
-    final divValue = _addedTextElementCount ~/ 10;
-    final modValue = _addedTextElementCount % 10;
+  /// Reposition the current automatically added texts to the top of the center position
+  /// This would put all the other texts on top of the newly added text
+  /// If the list reaches [_maxAutoAddTextLength], the position of the last texts would be the same
+  List<TextEle> _repositionAutoAddedTexts(Size center, List<TextEle> autoAddedElements) {
+    final repositionedTexts = <TextEle>[];
+    final centerHeight = center.height;
+    final maximumYPosition = centerHeight - (_maxAutoAddTextLength * 40);
 
-    final x = (divValue + 1) * 40.0;
-    final y = (modValue + 1) * 20.0;
+    for (var index = 0; index < autoAddedElements.length; index++) {
+      final currentText = autoAddedElements[index];
+      final newY = centerHeight - ((index + 1) * 40.0);
+      final y = currentText.point.y == maximumYPosition ? maximumYPosition : newY;
 
-    return Point<double>(x, y);
+      repositionedTexts.add(
+        TextEle(
+          currentText.text,
+          currentText.color,
+          Point(currentText.point.x, y),
+          hasComputedPosition: currentText.hasComputedPosition,
+        ),
+      );
+    }
+
+    return repositionedTexts;
   }
 
   /// Finds the nearest point on a line defined by two points (p1 and p2)
@@ -585,6 +622,8 @@ class SketchController extends ChangeNotifier {
               notifyListeners();
             }
           case TextEle():
+            // If auto added text is modified, we don't consider it as automatically added anymore
+            element.hasComputedPosition = false;
             _activeElement = element.update(
               details.localPosition,
               localHitPoint,

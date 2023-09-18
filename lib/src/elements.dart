@@ -301,8 +301,9 @@ class TextEle extends SketchElement {
   TextEle(
     this.text,
     this.color,
-    this.point,
-  ) : textPainter = TextPainter(
+    this.point, {
+    this.hasComputedPosition = false,
+  }) : textPainter = TextPainter(
           text: TextSpan(
             text: text,
             style: TextStyle(color: Colors.white),
@@ -322,6 +323,10 @@ class TextEle extends SketchElement {
 
   /// A [textPainter] that will paint the text on the canvas.
   final TextPainter textPainter;
+
+  /// This is true if the text element was added programmatically
+  /// By default, it is set to [false]
+  bool hasComputedPosition;
 
   @override
   void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
