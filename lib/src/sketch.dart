@@ -48,6 +48,18 @@ class _SketchWidgetState extends State<SketchWidget> {
     return GestureDetector(
       excludeFromSemantics: true,
       behavior: HitTestBehavior.translucent,
+      onLongPressStart: (details) {
+        setState(() => panPosition = details.localPosition);
+        widget.controller.onLongPressStart(details);
+      },
+      onLongPressMoveUpdate: (LongPressMoveUpdateDetails details) {
+        setState(() => panPosition = details.localPosition);
+        widget.controller.onLongPressMoveUpdate(details);
+      },
+      onLongPressEnd: (LongPressEndDetails details) {
+        setState(() => panPosition = null);
+        widget.controller.onLongPressEnd(details);
+      },
       onPanDown: (DragDownDetails details) {
         setState(() => panPosition = details.localPosition);
         widget.controller.onPanDown(details);
