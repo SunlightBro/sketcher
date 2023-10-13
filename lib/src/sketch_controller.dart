@@ -362,6 +362,7 @@ class SketchController extends ChangeNotifier {
     _isLongPressEdit = touchedElement != null;
 
     if (touchedElement != null) {
+      deactivateActiveElement();
       _onEditStart(localPosition);
     } else {
       _onPressStart(localPosition);
