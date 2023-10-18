@@ -397,11 +397,11 @@ class SketchController extends ChangeNotifier {
     }
   }
 
-  void onPanStart(DragStartDetails details) => _onPressStart(details.localPosition);
+  void onPanStart(Offset position) => _onPressStart(position);
 
-  void onPanUpdate(DragUpdateDetails details) => _onMoveUpdate(details.localPosition);
+  void onPanUpdate(Offset position) => _onMoveUpdate(position);
 
-  void onPanEnd(DragEndDetails details) => _onMoveEnd();
+  void onPanEnd() => _onMoveEnd();
 
   void onPanCancel() {
     if (sketchMode != SketchMode.edit) {
