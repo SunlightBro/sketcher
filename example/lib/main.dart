@@ -38,15 +38,18 @@ final IList<SketchElement> samples = IList([
 
 class _SketchPageState extends State<SketchPage> {
   late SketchController controller;
+  late TransformationController transformationController;
   late Uint8List backgroundImageBytesLandscapeImage;
   late Uint8List backgroundImageBytesPortraitImage;
 
   @override
   void initState() {
     super.initState();
+    transformationController = TransformationController();
     controller = SketchController(
       elements: samples,
       onEditText: onEditTextElement,
+      transformationController: transformationController,
     );
 
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
@@ -64,6 +67,7 @@ class _SketchPageState extends State<SketchPage> {
   void dispose() {
     controller.removeListener(() {});
     controller.dispose();
+    transformationController.dispose();
     super.dispose();
   }
 
@@ -150,7 +154,10 @@ class _SketchPageState extends State<SketchPage> {
     return Scaffold(
       body: Stack(
         children: [
-          SketchWidget(controller: controller),
+          SketchWidget(
+            controller: controller,
+            transformationController: transformationController,
+          ),
           Align(
             alignment: Alignment.center,
             child: Column(

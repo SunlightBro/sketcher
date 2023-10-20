@@ -8,8 +8,8 @@ import 'package:sketch/src/dashed_path_painter.dart';
 import 'package:sketch/src/element_modifiers.dart';
 import 'package:sketch/src/extensions.dart';
 
-const double toleranceRadius = 20.0;
-const double toleranceRadiusPOI = 40.0;
+const double toleranceRadius = 15.0;
+const double toleranceRadiusPOI = 30.0;
 
 sealed class SketchElement with Drawable, Hitable {}
 
