@@ -17,7 +17,7 @@ enum SketchMode {
 }
 
 /// Max number of rows for the auto added text elements
-const _maxAutoAddTextLength = 6;
+const _maxAutoAddTextLength = 8;
 
 class SketchController extends ChangeNotifier {
   SketchController({

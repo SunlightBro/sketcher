@@ -334,7 +334,7 @@ class TextEle extends SketchElement {
     textPainter.layout(maxWidth: size.width);
 
     // background of text element
-    final backgroundPaint = ui.Paint()..color = activeColor ?? Colors.black;
+    final backgroundPaint = ui.Paint()..color = activeColor ?? Colors.black.withOpacity(0.70);
     canvas.drawRRect(
       RRect.fromRectXY(
         Rect.fromCenter(
