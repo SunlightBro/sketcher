@@ -29,6 +29,7 @@ class SketchController extends ChangeNotifier {
     this.magnifierColor = Colors.grey,
     this.gridLinesColor = Colors.grey,
     this.onEditText,
+    this.transformationController,
     Uint8List? backgroundImageBytes,
     LineType? lineType,
     Color? color,
@@ -47,6 +48,8 @@ class SketchController extends ChangeNotifier {
   Queue<IList<SketchElement>> _history;
 
   IList<SketchElement> elements;
+
+  TransformationController? transformationController;
 
   Future<String?> Function(String? text)? onEditText;
 
@@ -76,6 +79,24 @@ class SketchController extends ChangeNotifier {
   final double magnifierSize;
   final double magnifierBorderWidth;
   final Color magnifierColor;
+
+  bool isZooming = false;
+  final maxScale = 3.0;
+  final minScale = 1.0;
+
+  double baseScaleFactor = 1.0;
+  double _scaleFactor = 1.0;
+  double get scaleFactor => _scaleFactor;
+
+  void zoomOut() => transformationController?.value = Matrix4.diagonal3Values(1.0, 1.0, 1.0);
+
+  set scaleFactor(double scale) {
+    _scaleFactor = scale > maxScale
+        ? maxScale
+        : scale < minScale
+            ? minScale
+            : scale;
+  }
 
   SketchElement? get activeElement => _activeElement;
 
@@ -355,8 +376,7 @@ class SketchController extends ChangeNotifier {
   /// Else, proceed with [_onPressStart] handling for the current [sketchMode]
   ///
   /// Set the value of [_isLongPressEdit] to true if there is a touched element
-  void onLongPressStart(LongPressStartDetails details) {
-    final localPosition = details.localPosition;
+  void onLongPressStart(Offset localPosition) {
     final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(localPosition) != null);
 
     _isLongPressEdit = touchedElement != null;
@@ -371,8 +391,8 @@ class SketchController extends ChangeNotifier {
 
   /// If currently editing an element on long press, trigger [_onEditUpdate]
   /// Else, trigger the [_onMoveUpdate] to handle move update for the current [sketchMode]
-  void onLongPressMoveUpdate(LongPressMoveUpdateDetails details) =>
-      _isLongPressEdit ? _onEditUpdate(details.localPosition) : _onMoveUpdate(details.localPosition);
+  void onLongPressMoveUpdate(Offset localPosition) =>
+      _isLongPressEdit ? _onEditUpdate(localPosition) : _onMoveUpdate(localPosition);
 
   /// If [_isLongPressEdit] is true, set it to false and trigger [_onEditEnd]
   /// Else, trigger [_onMoveEnd] to handle press end for the current [sketchMode]
@@ -397,11 +417,11 @@ class SketchController extends ChangeNotifier {
     }
   }
 
-  void onPanStart(DragStartDetails details) => _onPressStart(details.localPosition);
+  void onPanStart(Offset position) => _onPressStart(position);
 
-  void onPanUpdate(DragUpdateDetails details) => _onMoveUpdate(details.localPosition);
+  void onPanUpdate(Offset position) => _onMoveUpdate(position);
 
-  void onPanEnd(DragEndDetails details) => _onMoveEnd();
+  void onPanEnd() => _onMoveEnd();
 
   void onPanCancel() {
     if (sketchMode != SketchMode.edit) {
@@ -410,12 +430,12 @@ class SketchController extends ChangeNotifier {
     }
   }
 
-  void onTapUp(TapUpDetails tapUpDetails) {
+  void onTapUp(Offset localPosition) {
     deactivateActiveElement();
     switch (sketchMode) {
       // On tap up while text mode, call onEditText and pass a null value for the string value of the text since it is new
       case SketchMode.text:
-        final position = Point(tapUpDetails.localPosition.dx, tapUpDetails.localPosition.dy);
+        final position = Point(localPosition.dx, localPosition.dy);
         onEditText?.call(null).then((value) {
           if (value != null && value.isNotEmpty) {
             _activeElement = TextEle(value, color, position);
@@ -427,7 +447,7 @@ class SketchController extends ChangeNotifier {
       case SketchMode.edit:
       case SketchMode.line:
       case SketchMode.path:
-        final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(tapUpDetails.localPosition) != null);
+        final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(localPosition) != null);
         if (touchedElement == null) return;
 
         elements = elements.remove(touchedElement);
@@ -435,7 +455,7 @@ class SketchController extends ChangeNotifier {
 
         switch (touchedElement) {
           case TextEle():
-            final position = Point(tapUpDetails.localPosition.dx, tapUpDetails.localPosition.dy);
+            final position = Point(localPosition.dx, localPosition.dy);
             onEditText?.call(touchedElement.text).then((value) {
               if (value != null && value.isNotEmpty) {
                 _activeElement = TextEle(value, color, position);
@@ -611,10 +631,10 @@ class SketchController extends ChangeNotifier {
     deactivateActiveElement();
     switch (sketchMode) {
       case SketchMode.line:
-        final startPoint = Point(localPosition.dx, localPosition.dy);
+        final startPoint = Point<double>(localPosition.dx, localPosition.dy);
         _activeElement = LineEle(
           startPoint,
-          startPoint + Point(1, 1),
+          startPoint + Point<double>(1.0, 1.0),
           color,
           _lineType,
           _strokeWidth,
@@ -851,7 +871,7 @@ class SketchController extends ChangeNotifier {
     final touchedPolyHitPoint = polyElement.getHit(localPosition) as HitPointPoly;
     final polyStartPoint = polyElement.points.first;
     final polyEndPoint = polyElement.points.last;
-    final startPointHit = polyStartPoint.distanceTo(localPosition.toPoint()) < toleranceRadiusPOI;
+    final startPointHit = polyStartPoint.distanceTo(localPosition.toPoint()) < toleranceRadius;
 
     switch (touchedPolyHitPoint.hitType) {
       case PolyHitType.line:
