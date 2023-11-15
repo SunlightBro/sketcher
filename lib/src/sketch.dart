@@ -95,12 +95,13 @@ class _SketchWidgetState extends State<SketchWidget> {
             controller.scaleFactor = controller.baseScaleFactor * details.scale;
           }
         },
-        onInteractionEnd: (details) {
-          if (controller.isZooming) {
-            // Note: This is a workaround for this issue https://github.com/flutter/flutter/issues/132007
-            // [onInteractionEnd] for Android, releasing 2 fingers at the same time returns a pointerCount of 1 instead of zero
-            final isNotZooming = Platform.isAndroid ? details.pointerCount < 2 : details.pointerCount == 0;
-            controller.isZooming = !isNotZooming;
+        onInteractionEnd: (details) async {
+          // Note: This is a workaround for this issue https://github.com/flutter/flutter/issues/132007
+          // [onInteractionEnd] for Android, releasing 2 fingers at the same time returns a pointerCount of 1 instead of zero
+          final isDoneZooming = Platform.isAndroid ? details.pointerCount < 2 : details.pointerCount == 0;
+          if (controller.isZooming && isDoneZooming) {
+            if (Platform.isAndroid) await Future<void>.delayed(const Duration(milliseconds: 300));
+            controller.isZooming = false;
           }
 
           if (panPosition == null) return;
