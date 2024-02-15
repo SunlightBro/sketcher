@@ -871,7 +871,6 @@ class SketchController extends ChangeNotifier {
     final touchedPolyHitPoint = polyElement.getHit(localPosition) as HitPointPoly;
     final polyStartPoint = polyElement.points.first;
     final polyEndPoint = polyElement.points.last;
-    final startPointHit = polyStartPoint.distanceTo(localPosition.toPoint()) < toleranceRadius;
 
     switch (touchedPolyHitPoint.hitType) {
       case PolyHitType.line:
@@ -884,9 +883,9 @@ class SketchController extends ChangeNotifier {
           _activeElement = activeLineElement.update(nearestMidPoint.toOffset(), hitPointLine);
         }
       case PolyHitType.start:
+        _activeElement = activeLineElement.update(polyStartPoint.toOffset(), hitPointLine);
       case PolyHitType.end:
-        final targetPoint = startPointHit ? polyStartPoint.toOffset() : polyEndPoint.toOffset();
-        _activeElement = activeLineElement.update(targetPoint, hitPointLine);
+        _activeElement = activeLineElement.update(polyEndPoint.toOffset(), hitPointLine);
         break;
     }
   }
