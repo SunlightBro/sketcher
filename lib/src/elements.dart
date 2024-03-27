@@ -11,6 +11,8 @@ import 'package:sketch/src/extensions.dart';
 const double toleranceRadius = 15.0;
 const double toleranceRadiusPOI = 30.0;
 
+typedef EndPoints = ({Point<double> start, Point<double> end});
+
 sealed class SketchElement with Drawable, Hitable {}
 
 /// Draws an arrow head at the given point [arrowHeadPoint]
@@ -20,7 +22,10 @@ void _drawArrowHead({
   required Point<double> arrowHeadPoint,
   required Point<double> arrowTailPoint,
 }) {
-  Point<double> arrowPoint = arrowHeadPoint - arrowTailPoint;
+  // Arrow head point needs to be reduced so that the pointhy part of the arrow is at the center of the actual point
+  final reducedArrowPoints = _reduceLineLength(arrowHeadPoint, arrowTailPoint);
+  final reducedHeadPoint = reducedArrowPoints.start;
+  Point<double> arrowPoint = reducedHeadPoint - arrowTailPoint;
 
   final angle = atan2(arrowPoint.y, arrowPoint.x);
 
@@ -30,15 +35,37 @@ void _drawArrowHead({
 
   /// Create arrow path
   final path = Path();
-  path.moveTo(
-      arrowHeadPoint.x - arrowSize * cos(angle - arrowAngle), arrowHeadPoint.y - arrowSize * sin(angle - arrowAngle));
-  path.lineTo(arrowHeadPoint.x, arrowHeadPoint.y);
-  path.lineTo(
-      arrowHeadPoint.x - arrowSize * cos(angle + arrowAngle), arrowHeadPoint.y - arrowSize * sin(angle + arrowAngle));
+  path.moveTo(reducedHeadPoint.x - arrowSize * cos(angle - arrowAngle),
+      reducedHeadPoint.y - arrowSize * sin(angle - arrowAngle));
+  path.lineTo(reducedHeadPoint.x, reducedHeadPoint.y);
+  path.lineTo(reducedHeadPoint.x - arrowSize * cos(angle + arrowAngle),
+      reducedHeadPoint.y - arrowSize * sin(angle + arrowAngle));
   path.close();
 
   // draw arrow
   canvas.drawPath(path, paint);
+}
+
+EndPoints _reduceLineLength(Point<double> startPoint, Point<double> endPoint) {
+  // Calculate the vector representing the line direction
+  final lineVectorX = endPoint.x - startPoint.x;
+  final lineVectorY = endPoint.y - startPoint.y;
+
+  // Normalize the line vector to obtain a unit vector in the direction of the line
+  final unitVectorX = lineVectorX / sqrt(lineVectorX * lineVectorX + lineVectorY * lineVectorY);
+  final unitVectorY = lineVectorY / sqrt(lineVectorX * lineVectorX + lineVectorY * lineVectorY);
+
+  // Scale the unit vector by the reduction value to get the adjustment vector
+  final adjustmentVectorX = unitVectorX * -6.5;
+  final adjustmentVectorY = unitVectorY * -6.5;
+
+  // Adjust the start point to obtain the shortened line
+  final newStartPoint = Point(startPoint.x - adjustmentVectorX, startPoint.y - adjustmentVectorY);
+
+  // Calculate the adjusted end point by adding the adjustment vector to the original end point
+  final newEndPoint = Point(endPoint.x + adjustmentVectorX, endPoint.y + adjustmentVectorY);
+
+  return (start: newStartPoint, end: newEndPoint);
 }
 
 class LineEle extends SketchElement {
@@ -95,11 +122,15 @@ class LineEle extends SketchElement {
   }
 
   /// Draws a full line
-  void _drawFullLine({required ui.Canvas canvas, Color? activeColor}) {
+  void _drawFullLine({
+    required ui.Canvas canvas,
+    Color? activeColor,
+    EndPoints? endPoints,
+  }) {
     final ui.Paint paint = _getLineTypeFullPaint(activeColor);
     canvas.drawLine(
-      ui.Offset(start.x, start.y),
-      ui.Offset(end.x, end.y),
+      ui.Offset(endPoints?.start.x ?? start.x, endPoints?.start.y ?? start.y),
+      ui.Offset(endPoints?.end.x ?? end.x, endPoints?.end.y ?? end.y),
       paint,
     );
   }
@@ -124,6 +155,13 @@ class LineEle extends SketchElement {
       case LineType.arrowBetween:
       case LineType.arrowStart:
       case LineType.arrowEnd:
+        // Reduce  the rendered line length so it does not show at the tip of the arrow
+        final shortenedLine = _reduceLineLength(start, end);
+        final adjustedEndPoints = (
+          start: lineType != LineType.arrowEnd ? shortenedLine.start : start,
+          end: lineType != LineType.arrowStart ? shortenedLine.end : end
+        );
+
         final ui.Paint paint = _getLineTypeFullPaint(activeColor);
 
         if (lineType == LineType.arrowBetween) {
@@ -131,6 +169,7 @@ class LineEle extends SketchElement {
           _drawArrowHead(paint: paint, canvas: canvas, arrowHeadPoint: end, arrowTailPoint: start);
         } else if (lineType == LineType.arrowStart || lineType == LineType.arrowEnd) {
           final isLineEnd = lineType == LineType.arrowEnd;
+
           _drawArrowHead(
             paint: paint,
             canvas: canvas,
@@ -139,7 +178,11 @@ class LineEle extends SketchElement {
           );
         }
 
-        _drawFullLine(canvas: canvas, activeColor: activeColor);
+        _drawFullLine(
+          canvas: canvas,
+          activeColor: activeColor,
+          endPoints: adjustedEndPoints,
+        );
         break;
     }
     if (activeColor != null) {
@@ -418,22 +461,27 @@ class PolyEle extends SketchElement {
     throw UnimplementedError();
   }
 
-  @override
-  void draw(ui.Canvas canvas, ui.Size size, [ui.Color? activeColor]) {
-    final path = ui.Path()..moveTo(points[0].x, points[0].y);
-
-    points
-      ..removeAt(0)
-      ..forEach((p) => path.lineTo(p.x, p.y));
-
-    final currentColor = activeColor ?? color;
-
+  /// Move the starting point of the path to the first point of the [points]
+  ///
+  /// Then, draw out the line to each remaining points
+  ///
+  /// If [closed], close the path.
+  void _createPolyPath(IList<Point<double>> points, Path path) {
+    path.moveTo(points.first.x, points.first.y);
+    points.forEach((p) => path.lineTo(p.x, p.y));
     // Close the path if poly is closed
     if (closed) path.close();
+  }
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, [ui.Color? activeColor]) {
+    final currentColor = activeColor ?? color;
+    final path = ui.Path();
 
     switch (lineType) {
       case LineType.dashed:
       case LineType.dotted:
+        _createPolyPath(points, path);
         DashedPathPainter(
           originalPath: path,
           pathColor: currentColor,
@@ -442,6 +490,8 @@ class PolyEle extends SketchElement {
           dashLength: strokeWidth * lineType.dashLengthFactor,
         ).paint(canvas, size);
       case LineType.full:
+        _createPolyPath(points, path);
+
         final ui.Paint paint = ui.Paint()
           ..color = currentColor
           ..strokeWidth = strokeWidth
@@ -453,6 +503,14 @@ class PolyEle extends SketchElement {
       case LineType.arrowBetween:
       case LineType.arrowEnd:
       case LineType.arrowStart:
+        final startPoint = _reduceLineLength(points.first, points[1]).start;
+        final endPoint = _reduceLineLength(points.last, points.reversed[1]).start;
+        final adjustedStartPoint = lineType != LineType.arrowEnd ? startPoint : points.first;
+        final adjustedEndPoint = lineType != LineType.arrowStart ? endPoint : points.last;
+        final newPoints = points.replace(0, adjustedStartPoint).replace(points.length - 1, adjustedEndPoint);
+
+        _createPolyPath(newPoints, path);
+
         final ui.Paint paint = ui.Paint()
           ..color = currentColor
           ..strokeWidth = strokeWidth
@@ -460,10 +518,21 @@ class PolyEle extends SketchElement {
           ..style = ui.PaintingStyle.stroke;
 
         if (lineType == LineType.arrowBetween) {
-          _drawArrowHead(paint: paint, canvas: canvas, arrowHeadPoint: points.first, arrowTailPoint: points[1]);
-          _drawArrowHead(paint: paint, canvas: canvas, arrowHeadPoint: points.last, arrowTailPoint: points.reversed[1]);
+          _drawArrowHead(
+            paint: paint,
+            canvas: canvas,
+            arrowHeadPoint: points.first,
+            arrowTailPoint: points[1],
+          );
+          _drawArrowHead(
+            paint: paint,
+            canvas: canvas,
+            arrowHeadPoint: points.last,
+            arrowTailPoint: points.reversed[1],
+          );
         } else if (lineType == LineType.arrowStart || lineType == LineType.arrowEnd) {
           final isLineEnd = lineType == LineType.arrowEnd;
+
           _drawArrowHead(
             paint: paint,
             canvas: canvas,
@@ -485,8 +554,25 @@ class PolyEle extends SketchElement {
 
   @override
   HitPointPoly? getHit(ui.Offset offset) {
-    PolyHitType? polyHitType = _hitTest(offset);
-    return polyHitType != null ? HitPointPoly(this, offset, polyHitType) : null;
+    PolyHitType? polyHitType;
+    final hitPoint = Point<double>(offset.dx, offset.dy);
+
+    polyHitType = _hitTestForLinePoints(hitPoint);
+
+    if (polyHitType != null) return HitPointPoly(this, offset, polyHitType);
+
+    final lineHitEndPoints = _hitTestForPolyLine(hitPoint);
+
+    if (lineHitEndPoints != null) polyHitType = PolyHitType.line;
+
+    return polyHitType != null
+        ? HitPointPoly(
+            this,
+            offset,
+            polyHitType,
+            lineHitEndPoints: lineHitEndPoints,
+          )
+        : null;
   }
 
   @override
@@ -533,9 +619,7 @@ class PolyEle extends SketchElement {
   }
 
   /// Checks if polyline is hit
-  PolyHitType? _hitTest(Offset position) {
-    final hitPoint = Point<double>(position.dx, position.dy);
-
+  PolyHitType? _hitTestForLinePoints(Point<double> hitPoint) {
     // Check if first/last point of poly was hit
     final endPointHitType = _getEndPointsHitType(points.first, points.last, hitPoint);
 
@@ -543,25 +627,30 @@ class PolyEle extends SketchElement {
       return endPointHitType;
     } else if (points.any((element) => element.distanceTo(hitPoint) < toleranceRadiusPOI)) {
       return PolyHitType.midPoints;
-    } else {
-      // Check if poly was hit between lines
-      List<({Point<double> start, Point<double> end})> linesFromPoly = [];
-      Point<double>? previousPoint;
-
-      for (var point in [...points, if (closed) points.first]) {
-        if (previousPoint != null) {
-          linesFromPoly.add((
-            start: Point<double>(previousPoint.x, previousPoint.y),
-            end: Point<double>(point.x, point.y),
-          ));
-        }
-        previousPoint = point;
-      }
-
-      final isBetweenPoints = linesFromPoly.any((element) => _isBetweenPoints(element.start, element.end, hitPoint));
-
-      return isBetweenPoints ? PolyHitType.line : null;
     }
+
+    return null;
+  }
+
+  /// Check if polyline was hit between lines.
+  ///
+  /// Returns a type of [EndPoints] which contains the start and end point of which the poly line was hit.
+  EndPoints? _hitTestForPolyLine(Point<double> hitPoint) {
+    Point<double>? previousPoint;
+
+    for (var point in [...points, if (closed) points.first]) {
+      if (previousPoint != null) {
+        final start = Point<double>(previousPoint.x, previousPoint.y);
+        final end = Point<double>(point.x, point.y);
+
+        if (_isBetweenPoints(start, end, hitPoint)) {
+          return (start: start, end: end);
+        }
+      }
+      previousPoint = point;
+    }
+
+    return null;
   }
 
   /// Returns PolyHitType.start if startPoint is hit
@@ -638,10 +727,14 @@ class HitPointPoly extends HitPoint {
   HitPointPoly(
     super.element,
     super.hitOffset,
-    this.hitType,
-  );
+    this.hitType, {
+    this.lineHitEndPoints,
+  });
 
   final PolyHitType hitType;
+
+  /// [lineHitEndPoints] has value when hit type is [PolyHitType.line]
+  final EndPoints? lineHitEndPoints;
 }
 
 class HitPointPath extends HitPoint {

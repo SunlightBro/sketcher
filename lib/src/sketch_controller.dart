@@ -743,7 +743,14 @@ class SketchController extends ChangeNotifier {
 
     switch (hitType) {
       case PolyHitType.line:
-        _activeElement = element.update(localPosition, localHitPoint);
+        final start = hitPointLine.lineHitEndPoints?.start;
+        final end = hitPointLine.lineHitEndPoints?.end;
+
+        final newPosition = start != null && end != null
+            ? _findNearestPointOnLine(start, end, localPosition).toOffset()
+            : localPosition;
+
+        _activeElement = element.update(newPosition, localHitPoint);
       case PolyHitType.midPoints:
         final nearestMidPoint = touchedElement.points
             .firstWhereOrNull((element) => element.distanceTo(localPosition.toPoint()) < toleranceRadius);
@@ -765,7 +772,8 @@ class SketchController extends ChangeNotifier {
     final hitType = hitPointLine.hitType;
 
     if (hitType == LineHitType.line) {
-      _activeElement = activePolyElement.update(localPosition, localHitPoint);
+      final newPoint = _findNearestPointOnLine(lineElement.start, lineElement.end, localPosition).toOffset();
+      _activeElement = activePolyElement.update(newPoint, localHitPoint);
     } else {
       final newPoint = hitPointLine.hitType == LineHitType.start ? lineElement.start : lineElement.end;
       _activeElement = activePolyElement.update(newPoint.toOffset(), localHitPoint) as PolyEle;
@@ -874,7 +882,15 @@ class SketchController extends ChangeNotifier {
 
     switch (touchedPolyHitPoint.hitType) {
       case PolyHitType.line:
-        _activeElement = activeLineElement.update(localPosition, hitPointLine);
+        final start = touchedPolyHitPoint.lineHitEndPoints?.start;
+        final end = touchedPolyHitPoint.lineHitEndPoints?.end;
+
+        final newPosition = start != null && end != null
+            ? _findNearestPointOnLine(start, end, localPosition).toOffset()
+            : localPosition;
+
+        _activeElement = activeLineElement.update(newPosition, hitPointLine);
+
         break;
       case PolyHitType.midPoints:
         final nearestMidPoint = polyElement.points
