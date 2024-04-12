@@ -8,6 +8,7 @@ import 'package:sketch/src/dashed_path_painter.dart';
 import 'package:sketch/src/element_modifiers.dart';
 import 'package:sketch/src/extensions.dart';
 
+const _arrowScaleMultiplier = 3.5;
 typedef EndPoints = ({Point<double> start, Point<double> end});
 
 sealed class SketchElement with Drawable, Hitable {}
@@ -39,32 +40,26 @@ void _drawArrowHead({
   required ui.Canvas canvas,
   required Point<double> arrowHeadPoint,
   required Point<double> arrowTailPoint,
+  required double arrowSize,
 }) {
-  // Arrow head point needs to be reduced so that the pointhy part of the arrow is at the center of the actual point
-  final reducedArrowPoints = _reduceLineLength(arrowHeadPoint, arrowTailPoint);
-  final reducedHeadPoint = reducedArrowPoints.start;
-  Point<double> arrowPoint = reducedHeadPoint - arrowTailPoint;
-
+  final arrowPoint = arrowHeadPoint - arrowTailPoint;
   final angle = atan2(arrowPoint.y, arrowPoint.x);
-
-  // dimensions of arrowhead
-  final arrowSize = 15;
   final arrowAngle = 25 * pi / 180;
 
   /// Create arrow path
   final path = Path();
-  path.moveTo(reducedHeadPoint.x - arrowSize * cos(angle - arrowAngle),
-      reducedHeadPoint.y - arrowSize * sin(angle - arrowAngle));
-  path.lineTo(reducedHeadPoint.x, reducedHeadPoint.y);
-  path.lineTo(reducedHeadPoint.x - arrowSize * cos(angle + arrowAngle),
-      reducedHeadPoint.y - arrowSize * sin(angle + arrowAngle));
+  path.moveTo(
+      arrowHeadPoint.x - arrowSize * cos(angle - arrowAngle), arrowHeadPoint.y - arrowSize * sin(angle - arrowAngle));
+  path.lineTo(arrowHeadPoint.x, arrowHeadPoint.y);
+  path.lineTo(
+      arrowHeadPoint.x - arrowSize * cos(angle + arrowAngle), arrowHeadPoint.y - arrowSize * sin(angle + arrowAngle));
   path.close();
 
   // draw arrow
   canvas.drawPath(path, paint);
 }
 
-EndPoints _reduceLineLength(Point<double> startPoint, Point<double> endPoint) {
+EndPoints _reduceLineLength(Point<double> startPoint, Point<double> endPoint, double reductionSize) {
   // Calculate the vector representing the line direction
   final lineVectorX = endPoint.x - startPoint.x;
   final lineVectorY = endPoint.y - startPoint.y;
@@ -74,8 +69,8 @@ EndPoints _reduceLineLength(Point<double> startPoint, Point<double> endPoint) {
   final unitVectorY = lineVectorY / sqrt(lineVectorX * lineVectorX + lineVectorY * lineVectorY);
 
   // Scale the unit vector by the reduction value to get the adjustment vector
-  final adjustmentVectorX = unitVectorX * -6.5;
-  final adjustmentVectorY = unitVectorY * -6.5;
+  final adjustmentVectorX = unitVectorX * -reductionSize;
+  final adjustmentVectorY = unitVectorY * -reductionSize;
 
   // Adjust the start point to obtain the shortened line
   final newStartPoint = Point(startPoint.x - adjustmentVectorX, startPoint.y - adjustmentVectorY);
@@ -163,26 +158,42 @@ class LineEle extends DrawableSketchElement {
       case LineType.arrowBetween:
       case LineType.arrowStart:
       case LineType.arrowEnd:
+        final arrowSize = strokeWidth * _arrowScaleMultiplier;
         // Reduce  the rendered line length so it does not show at the tip of the arrow
-        final shortenedLine = _reduceLineLength(start, end);
+        final shortenedLine = _reduceLineLength(start, end, arrowSize * 0.8);
         final adjustedEndPoints = (
           start: lineType != LineType.arrowEnd ? shortenedLine.start : start,
           end: lineType != LineType.arrowStart ? shortenedLine.end : end
         );
-
-        final ui.Paint paint = _getLineTypeFullPaint(activeColor);
+        final arrowPaint = ui.Paint()
+          ..color = activeColor ?? color
+          ..strokeWidth = 1
+          ..strokeCap = ui.StrokeCap.round;
 
         if (lineType == LineType.arrowBetween) {
-          _drawArrowHead(paint: paint, canvas: canvas, arrowHeadPoint: start, arrowTailPoint: end);
-          _drawArrowHead(paint: paint, canvas: canvas, arrowHeadPoint: end, arrowTailPoint: start);
+          _drawArrowHead(
+            paint: arrowPaint,
+            canvas: canvas,
+            arrowHeadPoint: start,
+            arrowTailPoint: end,
+            arrowSize: arrowSize,
+          );
+          _drawArrowHead(
+            paint: arrowPaint,
+            canvas: canvas,
+            arrowHeadPoint: end,
+            arrowTailPoint: start,
+            arrowSize: arrowSize,
+          );
         } else if (lineType == LineType.arrowStart || lineType == LineType.arrowEnd) {
           final isLineEnd = lineType == LineType.arrowEnd;
 
           _drawArrowHead(
-            paint: paint,
+            paint: arrowPaint,
             canvas: canvas,
             arrowHeadPoint: isLineEnd ? end : start,
             arrowTailPoint: isLineEnd ? start : end,
+            arrowSize: arrowSize,
           );
         }
 
@@ -493,46 +504,56 @@ class PolyEle extends DrawableSketchElement {
       case LineType.arrowBetween:
       case LineType.arrowEnd:
       case LineType.arrowStart:
-        final startPoint = _reduceLineLength(points.first, points[1]).start;
-        final endPoint = _reduceLineLength(points.last, points.reversed[1]).start;
+        final arrowSize = strokeWidth * _arrowScaleMultiplier;
+        final startPoint = _reduceLineLength(points.first, points[1], arrowSize * 0.8).start;
+        final endPoint = _reduceLineLength(points.last, points.reversed[1], arrowSize * 0.8).start;
         final adjustedStartPoint = lineType != LineType.arrowEnd ? startPoint : points.first;
         final adjustedEndPoint = lineType != LineType.arrowStart ? endPoint : points.last;
         final newPoints = points.replace(0, adjustedStartPoint).replace(points.length - 1, adjustedEndPoint);
 
-        _createPolyPath(newPoints, path);
-
-        final ui.Paint paint = ui.Paint()
+        final linePaint = ui.Paint()
           ..color = currentColor
           ..strokeWidth = strokeWidth
           ..strokeCap = ui.StrokeCap.round
           ..style = ui.PaintingStyle.stroke;
 
+        final ui.Paint arrowPaint = ui.Paint()
+          ..color = currentColor
+          ..strokeWidth = 1
+          ..strokeCap = ui.StrokeCap.round;
+
+        // Lay out the points for the polygon
+        _createPolyPath(newPoints, path);
+
+        // draw the poly lines path
+        canvas.drawPath(path, linePaint);
+
         if (lineType == LineType.arrowBetween) {
           _drawArrowHead(
-            paint: paint,
+            paint: arrowPaint,
             canvas: canvas,
             arrowHeadPoint: points.first,
             arrowTailPoint: points[1],
+            arrowSize: arrowSize,
           );
           _drawArrowHead(
-            paint: paint,
+            paint: arrowPaint,
             canvas: canvas,
             arrowHeadPoint: points.last,
             arrowTailPoint: points.reversed[1],
+            arrowSize: arrowSize,
           );
         } else if (lineType == LineType.arrowStart || lineType == LineType.arrowEnd) {
           final isLineEnd = lineType == LineType.arrowEnd;
 
           _drawArrowHead(
-            paint: paint,
+            paint: arrowPaint,
             canvas: canvas,
             arrowHeadPoint: isLineEnd ? points.last : points.first,
             arrowTailPoint: isLineEnd ? points.reversed[1] : points[1],
+            arrowSize: arrowSize,
           );
         }
-
-        // draw the poly lines path
-        canvas.drawPath(path, paint);
 
         break;
     }
