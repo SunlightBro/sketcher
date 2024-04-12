@@ -8,12 +8,30 @@ import 'package:sketch/src/dashed_path_painter.dart';
 import 'package:sketch/src/element_modifiers.dart';
 import 'package:sketch/src/extensions.dart';
 
-const double toleranceRadius = 15.0;
-const double toleranceRadiusPOI = 30.0;
-
 typedef EndPoints = ({Point<double> start, Point<double> end});
 
 sealed class SketchElement with Drawable, Hitable {}
+
+/// Sketch elements that are drawn by the user
+abstract class DrawableSketchElement implements SketchElement {
+  final ui.Color color;
+
+  final LineType lineType;
+
+  final double strokeWidth;
+
+  DrawableSketchElement(
+    this.color,
+    this.lineType,
+    this.strokeWidth,
+  );
+
+  /// Touch tolerance of sketch element
+  double get touchTolerance => strokeWidth + 5;
+
+  /// Touch tolerance of line points
+  double get touchToleranceRadius => 20;
+}
 
 /// Draws an arrow head at the given point [arrowHeadPoint]
 void _drawArrowHead({
@@ -68,13 +86,13 @@ EndPoints _reduceLineLength(Point<double> startPoint, Point<double> endPoint) {
   return (start: newStartPoint, end: newEndPoint);
 }
 
-class LineEle extends SketchElement {
+class LineEle extends DrawableSketchElement {
   LineEle(
     this.start,
     this.end,
-    this.color,
-    this.lineType,
-    this.strokeWidth, {
+    super.color,
+    super.lineType,
+    super.strokeWidth, {
     this.description,
   });
 
@@ -83,15 +101,6 @@ class LineEle extends SketchElement {
 
   ///
   final Point<double> end;
-
-  /// [LineEle] modifiers
-  ui.Color color;
-
-  ///
-  LineType lineType;
-
-  ///
-  double strokeWidth;
 
   /// optional description
   final String? description;
@@ -107,16 +116,15 @@ class LineEle extends SketchElement {
 
   /// Draws circles around the start and end points of the line
   void _drawActiveElementEnds({required ui.Canvas canvas, required Color color}) {
-    const double activeElementEndRadius = 15.0;
     final activeElementEndPaint = Paint()..color = color.withOpacity(0.5);
     canvas.drawCircle(
       ui.Offset(start.x, start.y),
-      activeElementEndRadius,
+      touchToleranceRadius,
       activeElementEndPaint,
     );
     canvas.drawCircle(
       ui.Offset(end.x, end.y),
-      activeElementEndRadius,
+      touchToleranceRadius,
       activeElementEndPaint,
     );
   }
@@ -199,14 +207,14 @@ class LineEle extends SketchElement {
     final b = e.distanceTo(p);
     final c = s.distanceTo(e);
 
-    if (a < toleranceRadiusPOI || pow(b, 2) > pow(a, 2) + pow(c, 2)) {
-      return a < toleranceRadiusPOI ? LineHitType.start : null;
-    } else if (b < toleranceRadiusPOI || pow(a, 2) > pow(b, 2) + pow(c, 2)) {
-      return b < toleranceRadiusPOI ? LineHitType.end : null;
+    if (a <= touchToleranceRadius || pow(b, 2) > pow(a, 2) + pow(c, 2)) {
+      return a <= touchToleranceRadius ? LineHitType.start : null;
+    } else if (b <= touchToleranceRadius || pow(a, 2) > pow(b, 2) + pow(c, 2)) {
+      return b <= touchToleranceRadius ? LineHitType.end : null;
     } else {
       final t = (a + b + c) / 2;
       final h = 2 / c * sqrt(t * (t - a) * (t - b) * (t - c));
-      return h < toleranceRadius ? LineHitType.line : null;
+      return h <= touchTolerance ? LineHitType.line : null;
     }
   }
 
@@ -252,25 +260,16 @@ class LineEle extends SketchElement {
   }
 }
 
-class PathEle extends SketchElement {
+class PathEle extends DrawableSketchElement {
   PathEle(
     this.points,
-    this.color,
-    this.lineType,
-    this.strokeWidth,
+    super.color,
+    super.lineType,
+    super.strokeWidth,
   );
 
   /// The [points] of the Path to be drawn.
   final IList<Point<double>> points;
-
-  /// The [color] of the text.
-  final ui.Color color;
-
-  ///
-  final LineType lineType;
-
-  ///
-  final double strokeWidth;
 
   @override
   void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
@@ -313,7 +312,7 @@ class PathEle extends SketchElement {
     bool gotHit = false;
 
     for (final currentCheckingPoint in initialPoints) {
-      if (currentCheckingPoint.distanceTo(currentPosition) < toleranceRadiusPOI) {
+      if (currentCheckingPoint.distanceTo(currentPosition) < touchToleranceRadius) {
         gotHit = true;
         break;
       }
@@ -424,12 +423,12 @@ class TextEle extends SketchElement {
   }
 }
 
-class PolyEle extends SketchElement {
+class PolyEle extends DrawableSketchElement {
   PolyEle(
     this.points,
-    this.color,
-    this.lineType,
-    this.strokeWidth, {
+    super.color,
+    super.lineType,
+    super.strokeWidth, {
     this.closed = false,
     this.activePointIndex,
     this.descriptions,
@@ -439,15 +438,6 @@ class PolyEle extends SketchElement {
 
   /// If start point is same as endpoint (that doesn't get added again to the points list)
   final bool closed;
-
-  /// [LineEle] modifiers
-  final ui.Color color;
-
-  ///
-  final LineType lineType;
-
-  ///
-  final double strokeWidth;
 
   /// optional description
   final IList<String?>? descriptions;
@@ -585,7 +575,7 @@ class PolyEle extends SketchElement {
       case PolyHitType.end:
         final activeIndex = activePointIndex ??
             points.indexWhere((element) =>
-                element.distanceTo(Point<double>(hitPoint.hitOffset.dx, hitPoint.hitOffset.dy)) < toleranceRadiusPOI);
+                element.distanceTo(Point<double>(hitPoint.hitOffset.dx, hitPoint.hitOffset.dy)) < touchToleranceRadius);
 
         if (activeIndex == -1) return this;
 
@@ -606,13 +596,12 @@ class PolyEle extends SketchElement {
   }
 
   void _drawActiveElementPoints({required ui.Canvas canvas, required Color color}) {
-    const double activeElementEndRadius = 15.0;
     final activeElementEndPaint = Paint()..color = color.withOpacity(0.5);
 
     for (var point in points) {
       canvas.drawCircle(
         point.toOffset(),
-        activeElementEndRadius,
+        touchToleranceRadius,
         activeElementEndPaint,
       );
     }
@@ -625,7 +614,7 @@ class PolyEle extends SketchElement {
 
     if (endPointHitType != null) {
       return endPointHitType;
-    } else if (points.any((element) => element.distanceTo(hitPoint) < toleranceRadiusPOI)) {
+    } else if (points.any((element) => element.distanceTo(hitPoint) < touchToleranceRadius)) {
       return PolyHitType.midPoints;
     }
 
@@ -661,8 +650,8 @@ class PolyEle extends SketchElement {
     final b = endPoint.distanceTo(hitPoint);
     final c = startPoint.distanceTo(endPoint);
 
-    final startGotHit = (a < toleranceRadiusPOI || pow(b, 2) > pow(a, 2) + pow(c, 2)) && a < toleranceRadiusPOI;
-    final endGotHit = (b < toleranceRadiusPOI || pow(a, 2) > pow(b, 2) + pow(c, 2)) && b < toleranceRadiusPOI;
+    final startGotHit = (a < touchToleranceRadius || pow(b, 2) > pow(a, 2) + pow(c, 2)) && a < touchToleranceRadius;
+    final endGotHit = (b < touchToleranceRadius || pow(a, 2) > pow(b, 2) + pow(c, 2)) && b < touchToleranceRadius;
 
     if (!startGotHit && !endGotHit) {
       return null;
@@ -673,11 +662,10 @@ class PolyEle extends SketchElement {
 
   /// Returns true if polyLine is hit between points
   bool _isBetweenPoints(Point<double> point1, Point<double> point2, Point<double> currentPoint) {
-    double distanceToPoint1 = _getDistanceBetweenPoints(currentPoint, point1);
-    double distanceToPoint2 = _getDistanceBetweenPoints(currentPoint, point2);
-    double lineLength = _getDistanceBetweenPoints(point1, point2);
+    final nearestPoint = currentPoint.toOffset().findNearestPointOnLine(point1, point2);
+    final distanceToLine = _getDistanceBetweenPoints(nearestPoint.toPoint(), currentPoint);
 
-    return distanceToPoint1 + distanceToPoint2 <= lineLength + toleranceRadius;
+    return distanceToLine <= touchTolerance;
   }
 
   double _getDistanceBetweenPoints(Point<double> p1, Point<double> p2) {

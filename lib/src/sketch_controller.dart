@@ -56,6 +56,9 @@ class SketchController extends ChangeNotifier {
   SketchElement? _activeElement;
   HitPoint? hitPoint;
 
+  /// The initial touchPoint on the sketch canvas
+  Offset? _initialTouchPoint;
+
   SketchMode _sketchMode;
 
   Color _color;
@@ -406,6 +409,8 @@ class SketchController extends ChangeNotifier {
     } else {
       _onMoveEnd();
     }
+
+    _clearInitialTouchPoint();
   }
 
   void onPanDown(DragDownDetails details) {
@@ -430,8 +435,16 @@ class SketchController extends ChangeNotifier {
     }
   }
 
+  /// Set the [_initialTouchPoint] onTapDown
+  /// This is to ensure that if the onPanStart triggers, we still have the actual initial touch point to use instead of
+  /// the onPanStart's [localPosition] (inaccurate start position since onPanStart triggers later on).
+  void onTapDown(Offset localPosition) {
+    _initialTouchPoint = localPosition;
+  }
+
   void onTapUp(Offset localPosition) {
     deactivateActiveElement();
+    _clearInitialTouchPoint();
     switch (sketchMode) {
       // On tap up while text mode, call onEditText and pass a null value for the string value of the text since it is new
       case SketchMode.text:
@@ -540,8 +553,8 @@ class SketchController extends ChangeNotifier {
               final isEnd = selectedPoint == element.points.last;
               final localPoint = localPosition.toPoint();
 
-              if ((isStart && localPoint.distanceTo(lastElement) < toleranceRadius) ||
-                  (isEnd && localPoint.distanceTo(firstElement) < toleranceRadius)) {
+              if ((isStart && localPoint.distanceTo(lastElement) < element.touchTolerance) ||
+                  (isEnd && localPoint.distanceTo(firstElement) < element.touchTolerance)) {
                 final updatedPoint = isEnd ? firstElement : lastElement;
                 _activeElement = element.update(updatedPoint.toOffset(), localHitPoint) as PolyEle;
               } else {
@@ -565,6 +578,8 @@ class SketchController extends ChangeNotifier {
           localHitPoint,
         );
         notifyListeners();
+        break;
+      default:
         break;
     }
   }
@@ -629,9 +644,9 @@ class SketchController extends ChangeNotifier {
   /// Handles the initial press for the current [sketchMode]
   void _onPressStart(Offset localPosition) {
     deactivateActiveElement();
+    final startPoint = (_initialTouchPoint ?? localPosition).toPoint();
     switch (sketchMode) {
       case SketchMode.line:
-        final startPoint = Point<double>(localPosition.dx, localPosition.dy);
         _activeElement = LineEle(
           startPoint,
           startPoint + Point<double>(1.0, 1.0),
@@ -642,7 +657,6 @@ class SketchController extends ChangeNotifier {
         notifyListeners();
         break;
       case SketchMode.path:
-        final startPoint = Point(localPosition.dx, localPosition.dy);
         _activeElement = PathEle(
           IList([startPoint]),
           color,
@@ -655,7 +669,7 @@ class SketchController extends ChangeNotifier {
       case SketchMode.text:
         break;
       case SketchMode.edit:
-        _onEditStart(localPosition);
+        _onEditStart(startPoint.toOffset());
     }
   }
 
@@ -732,7 +746,12 @@ class SketchController extends ChangeNotifier {
         _onEditEnd();
     }
 
+    _clearInitialTouchPoint();
     _addChangeToHistory();
+  }
+
+  void _clearInitialTouchPoint() {
+    _initialTouchPoint = null;
   }
 
   /// Poly to Poly can only merge on their endpoints
@@ -746,14 +765,13 @@ class SketchController extends ChangeNotifier {
         final start = hitPointLine.lineHitEndPoints?.start;
         final end = hitPointLine.lineHitEndPoints?.end;
 
-        final newPosition = start != null && end != null
-            ? _findNearestPointOnLine(start, end, localPosition).toOffset()
-            : localPosition;
+        final newPosition =
+            start != null && end != null ? localPosition.findNearestPointOnLine(start, end) : localPosition;
 
         _activeElement = element.update(newPosition, localHitPoint);
       case PolyHitType.midPoints:
         final nearestMidPoint = touchedElement.points
-            .firstWhereOrNull((element) => element.distanceTo(localPosition.toPoint()) < toleranceRadius);
+            .firstWhereOrNull((point) => point.distanceTo(localPosition.toPoint()) < element.touchTolerance);
         if (nearestMidPoint != null) {
           _activeElement = element.update(nearestMidPoint.toOffset(), hitPointLine);
         }
@@ -772,7 +790,7 @@ class SketchController extends ChangeNotifier {
     final hitType = hitPointLine.hitType;
 
     if (hitType == LineHitType.line) {
-      final newPoint = _findNearestPointOnLine(lineElement.start, lineElement.end, localPosition).toOffset();
+      final newPoint = localPosition.findNearestPointOnLine(lineElement.start, lineElement.end);
       _activeElement = activePolyElement.update(newPoint, localHitPoint);
     } else {
       final newPoint = hitPointLine.hitType == LineHitType.start ? lineElement.start : lineElement.end;
@@ -827,51 +845,6 @@ class SketchController extends ChangeNotifier {
     return repositionedTexts;
   }
 
-  /// Finds the nearest point on a line defined by two points (p1 and p2)
-  /// from a given target point.
-  ///
-  /// The function calculates the nearest point on the line passing through p1 and p2
-  /// from the target point. It returns the coordinates of the nearest point as a
-  /// [Point<double>] object.
-  ///
-  /// The function takes three parameters:
-  /// - [p1]: The first point defining the line.
-  /// - [p2]: The second point defining the line.
-  /// - [targetPoint]: The point for which we want to find the nearest point on the line.
-  ///
-  /// The function returns a [Point<double>] object representing the nearest point on
-  /// the line from the [targetPoint].
-  Point<double> _findNearestPointOnLine(Point<double> p1, Point<double> p2, Offset targetPoint) {
-    // Calculate the vector from point p1 to point p2
-    Point<double> lineVector = Point<double>(p2.x - p1.x, p2.y - p1.y);
-
-    // Calculate the vector from point p1 to the target point
-    Point<double> targetVector = Point<double>(targetPoint.dx - p1.x, targetPoint.dy - p1.y);
-
-    // Calculate the dot product
-    double dotProduct = lineVector.x * targetVector.x + lineVector.y * targetVector.y;
-
-    // Calculate the squared length of the line vector
-    double lineLengthSquared = lineVector.x * lineVector.x + lineVector.y * lineVector.y;
-
-    // Calculate the parameter 't' to find the nearest point on the line
-    double t = dotProduct / lineLengthSquared;
-
-    // If t < 0, the nearest point is before p1 on the line
-    // If t > 1, the nearest point is after p2 on the line
-    // Otherwise, the nearest point is between p1 and p2 on the line
-    if (t < 0) {
-      return p1;
-    } else if (t > 1) {
-      return p2;
-    } else {
-      // Calculate the nearest point on the line
-      double nearestX = p1.x + t * lineVector.x;
-      double nearestY = p1.y + t * lineVector.y;
-      return Point<double>(nearestX, nearestY);
-    }
-  }
-
   /// Upon drag update, snaps the point of a line to the nearest endpoint of a poly within the tolerance radius
   /// If the point of line goes on the midpoints/line, no snapping will happen
   void _updateMagneticLineToPoly(
@@ -885,16 +858,15 @@ class SketchController extends ChangeNotifier {
         final start = touchedPolyHitPoint.lineHitEndPoints?.start;
         final end = touchedPolyHitPoint.lineHitEndPoints?.end;
 
-        final newPosition = start != null && end != null
-            ? _findNearestPointOnLine(start, end, localPosition).toOffset()
-            : localPosition;
+        final newPosition =
+            start != null && end != null ? localPosition.findNearestPointOnLine(start, end) : localPosition;
 
         _activeElement = activeLineElement.update(newPosition, hitPointLine);
 
         break;
       case PolyHitType.midPoints:
         final nearestMidPoint = polyElement.points
-            .firstWhereOrNull((element) => element.distanceTo(localPosition.toPoint()) < toleranceRadius);
+            .firstWhereOrNull((point) => point.distanceTo(localPosition.toPoint()) < polyElement.touchTolerance);
         if (nearestMidPoint != null) {
           _activeElement = activeLineElement.update(nearestMidPoint.toOffset(), hitPointLine);
         }
@@ -909,14 +881,13 @@ class SketchController extends ChangeNotifier {
   /// Updates the active element with the new position and snaps
   /// the line to the nearest line if it is close enough
   void _updateMagneticLine(Offset localPosition, SketchElement element, HitPointLine hitPointLine, LineEle lineEle) {
-    final nearestPoint = _findNearestPointOnLine(
+    final nearestPoint = localPosition.findNearestPointOnLine(
       lineEle.start,
       lineEle.end,
-      localPosition,
     );
 
     _activeElement = element.update(
-      nearestPoint.toOffset(),
+      nearestPoint,
       hitPointLine,
     );
   }
