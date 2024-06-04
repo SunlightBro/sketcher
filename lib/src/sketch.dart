@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:sketch/src/extensions.dart';
 import 'package:sketch/src/painter.dart';
 import 'package:sketch/src/sketch_controller.dart';
 
@@ -98,9 +97,10 @@ class _SketchWidgetState extends State<SketchWidget> {
         onInteractionEnd: (details) async {
           // Note: This is a workaround for this issue https://github.com/flutter/flutter/issues/132007
           // [onInteractionEnd] for Android, releasing 2 fingers at the same time returns a pointerCount of 1 instead of zero
-          final isDoneZooming = Platform.isAndroid ? details.pointerCount < 2 : details.pointerCount == 0;
+
+          final isDoneZooming = context.isAndroid ? details.pointerCount < 2 : details.pointerCount == 0;
           if (controller.isZooming && isDoneZooming) {
-            if (Platform.isAndroid) await Future<void>.delayed(const Duration(milliseconds: 300));
+            if (context.isAndroid) await Future<void>.delayed(const Duration(milliseconds: 300));
             controller.isZooming = false;
           }
 
