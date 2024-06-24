@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:math';
 import 'dart:typed_data';
@@ -14,6 +15,7 @@ enum SketchMode {
   path,
   text,
   edit,
+  oval,
 }
 
 /// Max number of rows for the auto added text elements
@@ -21,7 +23,7 @@ const _maxAutoAddTextLength = 8;
 
 class SketchController extends ChangeNotifier {
   SketchController({
-    this.elements = const IListConst([]),
+    this.inactiveElements = const IListConst([]),
     this.selectionColor = Colors.orange,
     this.magnifierScale = 1.5,
     this.magnifierSize = 150,
@@ -36,8 +38,8 @@ class SketchController extends ChangeNotifier {
     SketchMode? sketchMode,
     double? strokeWidth,
     bool? isGridLinesEnabled,
-  })  : _history = Queue<IList<SketchElement>>.of(<IList<SketchElement>>[elements]),
-        _sketchMode = sketchMode ?? SketchMode.edit,
+  })  : _history = Queue<IList<SketchElement>>.of(<IList<SketchElement>>[inactiveElements]),
+        _sketchMode = sketchMode ?? SketchMode.oval,
         _lineType = lineType ?? LineType.full,
         _color = color ?? Colors.black,
         _strokeWidth = strokeWidth ?? 10,
@@ -47,13 +49,29 @@ class SketchController extends ChangeNotifier {
   // ignore: unused_field
   Queue<IList<SketchElement>> _history;
 
-  IList<SketchElement> elements;
+  IList<SketchElement> inactiveElements;
 
   TransformationController? transformationController;
 
   Future<String?> Function(String? text)? onEditText;
 
   SketchElement? _activeElement;
+
+  // Setter for activeElement
+  set activeElement(SketchElement? element) {
+    if (element != null) {
+      inactiveElements = inactiveElements.remove(element);
+    }
+
+    // Add flag on drawable sketch element if it is active
+    // This is currently used as a basis for hit test
+    if (element is DrawableSketchElement) {
+      _activeElement = element..isActive = true;
+    } else {
+      _activeElement = element;
+    }
+  }
+
   HitPoint? hitPoint;
 
   /// The initial touchPoint on the sketch canvas
@@ -155,7 +173,7 @@ class SketchController extends ChangeNotifier {
       // set active element color
       switch (element) {
         case LineEle():
-          _activeElement = LineEle(
+          activeElement = LineEle(
             element.start,
             element.end,
             color,
@@ -163,19 +181,26 @@ class SketchController extends ChangeNotifier {
             element.strokeWidth,
           );
         case PathEle():
-          _activeElement = PathEle(
+          activeElement = PathEle(
             element.points,
             color,
             element.lineType,
             element.strokeWidth,
           );
         case PolyEle():
-          _activeElement = PolyEle(
+          activeElement = PolyEle(
             element.points,
             color,
             element.lineType,
             element.strokeWidth,
             closed: element.closed,
+          );
+        case OvalEle():
+          activeElement = OvalEle(
+            points: element.points,
+            color,
+            element.lineType,
+            element.strokeWidth,
           );
         case _:
       }
@@ -195,7 +220,7 @@ class SketchController extends ChangeNotifier {
       // set active lineType
       switch (element) {
         case LineEle():
-          _activeElement = LineEle(
+          activeElement = LineEle(
             element.start,
             element.end,
             element.color,
@@ -203,7 +228,7 @@ class SketchController extends ChangeNotifier {
             element.strokeWidth,
           );
         case PathEle():
-          _activeElement = PathEle(
+          activeElement = PathEle(
             element.points,
             element.color,
             lineType,
@@ -211,12 +236,19 @@ class SketchController extends ChangeNotifier {
           );
         case PolyEle():
           final isClosed = element.closed;
-          _activeElement = PolyEle(
+          activeElement = PolyEle(
             element.points,
             element.color,
             isClosed && lineType.isArrow ? element.lineType : lineType,
             element.strokeWidth,
             closed: isClosed,
+          );
+        case OvalEle():
+          activeElement = OvalEle(
+            color,
+            lineType.isArrow ? element.lineType : lineType,
+            strokeWidth,
+            points: element.points,
           );
         case _:
       }
@@ -236,7 +268,7 @@ class SketchController extends ChangeNotifier {
       // set active lineType
       switch (element) {
         case LineEle():
-          _activeElement = LineEle(
+          activeElement = LineEle(
             element.start,
             element.end,
             element.color,
@@ -244,19 +276,26 @@ class SketchController extends ChangeNotifier {
             strokeWidth,
           );
         case PathEle():
-          _activeElement = PathEle(
+          activeElement = PathEle(
             element.points,
             element.color,
             element.lineType,
             strokeWidth,
           );
         case PolyEle():
-          _activeElement = PolyEle(
+          activeElement = PolyEle(
             element.points,
             element.color,
             element.lineType,
             strokeWidth,
             closed: element.closed,
+          );
+        case OvalEle():
+          activeElement = OvalEle(
+            color,
+            lineType,
+            strokeWidth,
+            points: element.points,
           );
         case _:
       }
@@ -289,7 +328,7 @@ class SketchController extends ChangeNotifier {
     if (_history.isEmpty) return;
     deactivateActiveElement();
     _history.removeLast();
-    elements = _history.last;
+    inactiveElements = _history.last;
     notifyListeners();
   }
 
@@ -305,7 +344,7 @@ class SketchController extends ChangeNotifier {
     // TODO(Jayvee) : Remove when a better implementation for activePointIndex is applied
     if (element is PolyEle) element.activePointIndex = null;
 
-    final allElements = element == null ? elements : elements.add(element);
+    final allElements = element == null ? inactiveElements : inactiveElements.add(element);
 
     // save a history entry only if the current elements list differs from the last
     if (_history.last != allElements) {
@@ -322,14 +361,17 @@ class SketchController extends ChangeNotifier {
   void deactivateActiveElement() {
     final element = _activeElement;
     if (element != null) {
-      elements = elements.add(element);
-      _activeElement = null;
+      if (element is DrawableSketchElement) {
+        element.isActive = false;
+      }
+      inactiveElements = inactiveElements.add(element);
+      activeElement = null;
       notifyListeners();
     }
   }
 
   void deleteActiveElement() {
-    _activeElement = null;
+    activeElement = null;
     _addChangeToHistory();
     notifyListeners();
   }
@@ -339,18 +381,17 @@ class SketchController extends ChangeNotifier {
   /// Move the other automatically added texts unto the top of the new text until it reaches the [_maxAutoAddTextLength]
   /// Replace [_autoAddedTextElements] value with the new text and the repositioned texts
   void addTextElement(String? text, {Point<double>? position}) {
-    deactivateActiveElement();
     if (text != null && text.isNotEmpty) {
       final center = (initialAspectRatio ?? Size(0, 0)) / 2;
       final textPosition = position ?? Point<double>(center.width, center.height);
       final textEle = TextEle(text, color, textPosition, hasComputedPosition: true);
 
       // Assign it as the current active element
-      _activeElement = textEle;
+      activeElement = textEle;
 
       // Separate the autoAddedTextElements from all the other elements
       final separatedElementsRecord =
-          elements.fold<({List<SketchElement> otherElements, List<TextEle> autoAddedTextElements})>(
+          inactiveElements.fold<({List<SketchElement> otherElements, List<TextEle> autoAddedTextElements})>(
         (otherElements: [], autoAddedTextElements: []),
         (previousValue, element) {
           if (element is! TextEle || !element.hasComputedPosition) {
@@ -365,7 +406,7 @@ class SketchController extends ChangeNotifier {
       final repositionedAutoAddedText =
           _repositionAutoAddedTexts(center, separatedElementsRecord.autoAddedTextElements.reversedView);
 
-      elements = IList([
+      inactiveElements = IList([
         ...separatedElementsRecord.otherElements,
         ...repositionedAutoAddedText.reversedView,
       ]);
@@ -380,13 +421,12 @@ class SketchController extends ChangeNotifier {
   ///
   /// Set the value of [_isLongPressEdit] to true if there is a touched element
   void onLongPressStart(Offset localPosition) {
-    final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(localPosition) != null);
+    final touchedElement = _getTouchedElementFromAllElements(localPosition);
 
     _isLongPressEdit = touchedElement != null;
 
     if (touchedElement != null) {
-      deactivateActiveElement();
-      _onEditStart(localPosition);
+      _onEditStart(localPosition, element: touchedElement);
     } else {
       _onPressStart(localPosition);
     }
@@ -403,7 +443,6 @@ class SketchController extends ChangeNotifier {
     if (_isLongPressEdit) {
       _onEditEnd();
       _isLongPressEdit = false;
-
       deactivateActiveElement();
       _addChangeToHistory();
     } else {
@@ -419,8 +458,13 @@ class SketchController extends ChangeNotifier {
       case SketchMode.path:
       case SketchMode.text:
       case SketchMode.edit:
+      case SketchMode.oval:
     }
   }
+
+  SketchElement? _getTouchedElementFromAllElements(Offset offset) => activeElement?.getHit(offset) != null
+      ? activeElement
+      : inactiveElements.reversed.firstWhereOrNull((e) => e.getHit(offset) != null);
 
   void onPanStart(Offset position) => _onPressStart(position);
 
@@ -443,35 +487,57 @@ class SketchController extends ChangeNotifier {
   }
 
   void onTapUp(Offset localPosition) {
-    deactivateActiveElement();
+    final touchedElement = _getTouchedElementFromAllElements(localPosition);
+
     _clearInitialTouchPoint();
+    deactivateActiveElement();
+
+    activeElement = touchedElement;
+
     switch (sketchMode) {
       // On tap up while text mode, call onEditText and pass a null value for the string value of the text since it is new
       case SketchMode.text:
+        final textValue = touchedElement is TextEle ? touchedElement.text : null;
         final position = Point(localPosition.dx, localPosition.dy);
-        onEditText?.call(null).then((value) {
+
+        onEditText?.call(textValue).then((value) {
           if (value != null && value.isNotEmpty) {
-            _activeElement = TextEle(value, color, position);
+            activeElement = TextEle(value, color, position);
             notifyListeners();
             _addChangeToHistory();
           }
         });
+      case SketchMode.oval:
+        if (touchedElement == null) {
+          inactiveElements = inactiveElements.add(OvalEle.fromStartPointWithSize(
+            color: color,
+            lineType: lineType,
+            strokeWidth: strokeWidth,
+            startPoint: localPosition,
+            localPoint: localPosition,
+          ));
+        } else {
+          activeElement = touchedElement;
+          _sketchMode = SketchMode.edit;
+        }
+
+        _addChangeToHistory();
+
+        break;
       // On tap up while edit mode and selected element is text, call onEditText and pass the text element's value
       case SketchMode.edit:
       case SketchMode.line:
       case SketchMode.path:
-        final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(localPosition) != null);
         if (touchedElement == null) return;
 
-        elements = elements.remove(touchedElement);
-        _activeElement = touchedElement;
+        activeElement = touchedElement;
 
         switch (touchedElement) {
           case TextEle():
             final position = Point(localPosition.dx, localPosition.dy);
             onEditText?.call(touchedElement.text).then((value) {
               if (value != null && value.isNotEmpty) {
-                _activeElement = TextEle(value, color, position);
+                activeElement = TextEle(value, color, position);
                 notifyListeners();
                 _addChangeToHistory();
               }
@@ -488,18 +554,24 @@ class SketchController extends ChangeNotifier {
   ///
   /// Triggers an early return if there is no selected element
   ///
-  /// Set the selected element as the [_activeElement] and remove it from the current list of [elements]
-  void _onEditStart(Offset localPosition) {
-    final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(localPosition) != null);
+  /// Set the selected element as the [_activeElement] and remove it from the current list of [inactiveElements]
+  void _onEditStart(Offset localPosition, {SketchElement? element}) {
+    final touchedElement = element ?? _getTouchedElementFromAllElements(localPosition);
+
+    // nothing touched
     if (touchedElement == null) {
-      // nothing touched
+      hitPoint = null;
+      _initialTouchPoint = null;
+      deactivateActiveElement();
       return;
     }
+
+    _initialTouchPoint ??= localPosition;
     hitPoint = touchedElement.getHit(localPosition);
 
-    // remove element from the elements list and hand it over to the active painter
-    elements = elements.remove(touchedElement);
-    _activeElement = touchedElement;
+    deactivateActiveElement();
+    activeElement = touchedElement;
+
     notifyListeners();
   }
 
@@ -514,13 +586,13 @@ class SketchController extends ChangeNotifier {
     switch (element) {
       case LineEle():
         if (localHitPoint is HitPointLine) {
-          final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(localPosition) != null);
+          final touchedElement = inactiveElements.reversed.firstWhereOrNull((e) => e.getHit(localPosition) != null);
           if (touchedElement is LineEle) {
             _updateMagneticLine(localPosition, element, localHitPoint, touchedElement);
           } else if (touchedElement is PolyEle) {
             _updateMagneticLineToPoly(localPosition, element, localHitPoint, touchedElement);
           } else {
-            _activeElement = element.update(
+            activeElement = element.update(
               localPosition,
               localHitPoint,
             );
@@ -530,12 +602,12 @@ class SketchController extends ChangeNotifier {
         }
       case PathEle():
         if (localHitPoint is HitPointPath) {
-          _activeElement = element.update(localPosition, localHitPoint);
+          activeElement = element.update(localPosition, localHitPoint);
           notifyListeners();
         }
       case PolyEle():
         if (localHitPoint is HitPointPoly) {
-          final touchedElement = elements.reversed.firstWhereOrNull((e) => e.getHit(localPosition) != null);
+          final touchedElement = inactiveElements.reversed.firstWhereOrNull((e) => e.getHit(localPosition) != null);
 
           /// Poly merging to itself
           if (touchedElement == null) {
@@ -546,7 +618,7 @@ class SketchController extends ChangeNotifier {
 
             // If there is no selected point, or if there are only 3 points, we only update the active Elements normally
             if (selectedPoint == null || element.points.length <= 3) {
-              _activeElement = element.update(localPosition, localHitPoint);
+              activeElement = element.update(localPosition, localHitPoint);
             } else {
               // If start and end point meet within the toleranceRadius, snap it to each other and update activeElement
               final isStart = selectedPoint == element.points.first;
@@ -556,9 +628,9 @@ class SketchController extends ChangeNotifier {
               if ((isStart && localPoint.distanceTo(lastElement) < element.touchTolerance) ||
                   (isEnd && localPoint.distanceTo(firstElement) < element.touchTolerance)) {
                 final updatedPoint = isEnd ? firstElement : lastElement;
-                _activeElement = element.update(updatedPoint.toOffset(), localHitPoint) as PolyEle;
+                activeElement = element.update(updatedPoint.toOffset(), localHitPoint) as PolyEle;
               } else {
-                _activeElement = element.update(localPosition, localHitPoint);
+                activeElement = element.update(localPosition, localHitPoint);
               }
             }
           } else if (touchedElement is PolyEle) {
@@ -566,19 +638,21 @@ class SketchController extends ChangeNotifier {
           } else if (touchedElement is LineEle) {
             _handlePolyToLineMerging(element, touchedElement, localPosition, localHitPoint);
           } else {
-            _activeElement = element.update(localPosition, localHitPoint);
+            activeElement = element.update(localPosition, localHitPoint);
           }
           notifyListeners();
         }
       case TextEle():
         // If auto added text is modified, we don't consider it as automatically added anymore
         element.hasComputedPosition = false;
-        _activeElement = element.update(
+        activeElement = element.update(
           localPosition,
           localHitPoint,
         );
         notifyListeners();
         break;
+      case OvalEle():
+        activeElement = element.update(localPosition, localHitPoint);
       default:
         break;
     }
@@ -590,7 +664,7 @@ class SketchController extends ChangeNotifier {
 
     /// Handle merging of PolyEle on pan end
     if (element is PolyEle && !element.closed) {
-      final touchedElement = elements.firstWhereOrNull((e) {
+      final touchedElement = inactiveElements.firstWhereOrNull((e) {
         if (e is PolyEle || e is LineEle) {
           final startPointHit = e.getHit(element.points.first.toOffset()) != null;
           final endPointHit = e.getHit(element.points.last.toOffset()) != null;
@@ -619,12 +693,12 @@ class SketchController extends ChangeNotifier {
         if (points != null) newPoints = points;
       }
 
-      if (touchedElement != null && newPoints != null) elements = elements.remove(touchedElement);
+      if (touchedElement != null && newPoints != null) inactiveElements = inactiveElements.remove(touchedElement);
 
       newPoints ??= element.points;
       final isClosed = newPoints.first == newPoints.last || element.closed;
 
-      _activeElement = PolyEle(
+      activeElement = PolyEle(
         newPoints.removeDuplicates(),
         color,
         isClosed && lineType.isArrow ? LineType.full : lineType,
@@ -643,11 +717,10 @@ class SketchController extends ChangeNotifier {
 
   /// Handles the initial press for the current [sketchMode]
   void _onPressStart(Offset localPosition) {
-    deactivateActiveElement();
     final startPoint = (_initialTouchPoint ?? localPosition).toPoint();
     switch (sketchMode) {
       case SketchMode.line:
-        _activeElement = LineEle(
+        activeElement = LineEle(
           startPoint,
           startPoint + Point<double>(1.0, 1.0),
           color,
@@ -657,7 +730,7 @@ class SketchController extends ChangeNotifier {
         notifyListeners();
         break;
       case SketchMode.path:
-        _activeElement = PathEle(
+        activeElement = PathEle(
           IList([startPoint]),
           color,
           _lineType,
@@ -665,7 +738,15 @@ class SketchController extends ChangeNotifier {
         );
         notifyListeners();
         break;
-
+      case SketchMode.oval:
+        activeElement = OvalEle.fromStartPointWithSize(
+          startPoint: startPoint.toOffset(),
+          localPoint: localPosition,
+          size: 0,
+          color: color,
+          lineType: lineType,
+          strokeWidth: strokeWidth,
+        );
       case SketchMode.text:
         break;
       case SketchMode.edit:
@@ -685,13 +766,13 @@ class SketchController extends ChangeNotifier {
           LineHitType.end,
         );
 
-        final touchedElement = elements.firstWhereOrNull((e) => e.getHit(localPosition) != null);
+        final touchedElement = inactiveElements.firstWhereOrNull((e) => e.getHit(localPosition) != null);
         if (touchedElement is LineEle) {
           _updateMagneticLine(localPosition, element, hitPointLine, touchedElement);
         } else if (touchedElement is PolyEle) {
           _updateMagneticLineToPoly(localPosition, element as LineEle, hitPointLine, touchedElement);
         } else {
-          _activeElement = element.update(
+          activeElement = element.update(
             localPosition,
             hitPointLine,
           );
@@ -704,7 +785,7 @@ class SketchController extends ChangeNotifier {
         if (element == null || !isPathElement) return;
 
         final currentPoint = Point(localPosition.dx, localPosition.dy);
-        _activeElement = PathEle(
+        activeElement = PathEle(
           IList([
             ...element.points,
             currentPoint,
@@ -715,6 +796,23 @@ class SketchController extends ChangeNotifier {
         );
 
         notifyListeners();
+        break;
+      case SketchMode.oval:
+        final element = _activeElement;
+        final circleElement = element as OvalEle?;
+
+        if (circleElement == null) return;
+
+        final distance = circleElement.points.pointA.distanceTo(localPosition);
+
+        activeElement = OvalEle.fromStartPointWithSize(
+          startPoint: circleElement.points.pointA,
+          localPoint: localPosition,
+          size: distance,
+          color: color,
+          lineType: lineType,
+          strokeWidth: strokeWidth,
+        );
         break;
       case SketchMode.text:
       case SketchMode.edit:
@@ -735,7 +833,9 @@ class SketchController extends ChangeNotifier {
         );
 
         _checkMergeLine(element as LineEle, hitPointLine);
-
+        deactivateActiveElement();
+        break;
+      case SketchMode.oval:
         deactivateActiveElement();
         break;
       case SketchMode.path:
@@ -768,18 +868,18 @@ class SketchController extends ChangeNotifier {
         final newPosition =
             start != null && end != null ? localPosition.findNearestPointOnLine(start, end) : localPosition;
 
-        _activeElement = element.update(newPosition, localHitPoint);
+        activeElement = element.update(newPosition, localHitPoint);
       case PolyHitType.midPoints:
         final nearestMidPoint = touchedElement.points
             .firstWhereOrNull((point) => point.distanceTo(localPosition.toPoint()) < element.touchTolerance);
         if (nearestMidPoint != null) {
-          _activeElement = element.update(nearestMidPoint.toOffset(), hitPointLine);
+          activeElement = element.update(nearestMidPoint.toOffset(), hitPointLine);
         }
       case PolyHitType.start:
       case PolyHitType.end:
         final newPoint =
             hitPointLine.hitType == PolyHitType.start ? touchedElement.points.first : touchedElement.points.last;
-        _activeElement = element.update(newPoint.toOffset(), localHitPoint) as PolyEle;
+        activeElement = element.update(newPoint.toOffset(), localHitPoint) as PolyEle;
     }
   }
 
@@ -791,10 +891,10 @@ class SketchController extends ChangeNotifier {
 
     if (hitType == LineHitType.line) {
       final newPoint = localPosition.findNearestPointOnLine(lineElement.start, lineElement.end);
-      _activeElement = activePolyElement.update(newPoint, localHitPoint);
+      activeElement = activePolyElement.update(newPoint, localHitPoint);
     } else {
       final newPoint = hitPointLine.hitType == LineHitType.start ? lineElement.start : lineElement.end;
-      _activeElement = activePolyElement.update(newPoint.toOffset(), localHitPoint) as PolyEle;
+      activeElement = activePolyElement.update(newPoint.toOffset(), localHitPoint) as PolyEle;
     }
   }
 
@@ -861,19 +961,19 @@ class SketchController extends ChangeNotifier {
         final newPosition =
             start != null && end != null ? localPosition.findNearestPointOnLine(start, end) : localPosition;
 
-        _activeElement = activeLineElement.update(newPosition, hitPointLine);
+        activeElement = activeLineElement.update(newPosition, hitPointLine);
 
         break;
       case PolyHitType.midPoints:
         final nearestMidPoint = polyElement.points
             .firstWhereOrNull((point) => point.distanceTo(localPosition.toPoint()) < polyElement.touchTolerance);
         if (nearestMidPoint != null) {
-          _activeElement = activeLineElement.update(nearestMidPoint.toOffset(), hitPointLine);
+          activeElement = activeLineElement.update(nearestMidPoint.toOffset(), hitPointLine);
         }
       case PolyHitType.start:
-        _activeElement = activeLineElement.update(polyStartPoint.toOffset(), hitPointLine);
+        activeElement = activeLineElement.update(polyStartPoint.toOffset(), hitPointLine);
       case PolyHitType.end:
-        _activeElement = activeLineElement.update(polyEndPoint.toOffset(), hitPointLine);
+        activeElement = activeLineElement.update(polyEndPoint.toOffset(), hitPointLine);
         break;
     }
   }
@@ -886,7 +986,7 @@ class SketchController extends ChangeNotifier {
       lineEle.end,
     );
 
-    _activeElement = element.update(
+    activeElement = element.update(
       nearestPoint,
       hitPointLine,
     );
@@ -894,7 +994,7 @@ class SketchController extends ChangeNotifier {
 
   void _checkMergeLine(LineEle lineElement, HitPointLine hitPointLine) {
     final touchedElement =
-        elements.reversed.where((element) => element is LineEle || element is PolyEle).firstWhereOrNull((e) {
+        inactiveElements.reversed.where((element) => element is LineEle || element is PolyEle).firstWhereOrNull((e) {
       return e.getHit(lineElement.start.toOffset()) != null || e.getHit(lineElement.end.toOffset()) != null;
     });
 
@@ -902,15 +1002,15 @@ class SketchController extends ChangeNotifier {
       final points = _onMergeTwoLines(touchedElement.start, touchedElement.end, lineElement.start, lineElement.end);
 
       if (points != null) {
-        elements = elements.removeAll([touchedElement, lineElement]);
-        _activeElement = PolyEle(IList(points), color, lineType, strokeWidth);
+        inactiveElements = inactiveElements.removeAll([touchedElement, lineElement]);
+        activeElement = PolyEle(IList(points), color, lineType, strokeWidth);
       }
       notifyListeners();
     } else if (touchedElement is PolyEle && !touchedElement.closed) {
       final newPoints = _onMergePolyAndLine(touchedElement, lineElement);
       if (newPoints != null) {
-        elements = elements.removeAll([touchedElement, lineElement]);
-        _activeElement = PolyEle(newPoints, color, lineType, strokeWidth, closed: touchedElement.closed);
+        inactiveElements = inactiveElements.removeAll([touchedElement, lineElement]);
+        activeElement = PolyEle(newPoints, color, lineType, strokeWidth, closed: touchedElement.closed);
         notifyListeners();
       }
     }

@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:example/background_image_switch.dart';
 import 'package:example/color_picker.dart';
 import 'package:example/line_type_switch.dart';
@@ -32,8 +30,18 @@ class SketchPage extends StatefulWidget {
 }
 
 final IList<SketchElement> samples = IList([
-  LineEle(Point(50, 50), Point(600, 200), Colors.red, LineType.dotted, 10),
-  LineEle(Point(500, 500), Point(600, 400), Colors.blue, LineType.dotted, 10),
+  // LineEle(Point(50, 50), Point(600, 200), Colors.red, LineType.dotted, 10),
+  OvalEle(
+    Colors.blue,
+    LineType.dotted,
+    10,
+    points: QuadPoints(
+      pointA: Offset(20, 120),
+      pointB: Offset(120, 120),
+      pointC: Offset(20, 320),
+      pointD: Offset(120, 320),
+    ),
+  ),
 ]);
 
 class _SketchPageState extends State<SketchPage> {
@@ -47,7 +55,7 @@ class _SketchPageState extends State<SketchPage> {
     super.initState();
     transformationController = TransformationController();
     controller = SketchController(
-      elements: samples,
+      inactiveElements: samples,
       onEditText: onEditTextElement,
       transformationController: transformationController,
     );
