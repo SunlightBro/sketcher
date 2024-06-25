@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 import 'package:collection/collection.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sketch/src/dashed_path_painter.dart';
 import 'package:sketch/src/element_modifiers.dart';
 import 'package:sketch/src/extensions.dart';
@@ -360,6 +361,7 @@ class TextEle extends SketchElement {
     this.text,
     this.color,
     this.point, {
+    this.orientation = Orientation.portrait,
     this.hasComputedPosition = false,
   }) : textPainter = TextPainter(
           text: TextSpan(
@@ -386,10 +388,22 @@ class TextEle extends SketchElement {
   /// By default, it is set to [false]
   bool hasComputedPosition;
 
+  /// Determines the orientation of the text element
+  Orientation orientation;
+
   @override
   void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
     final position = Offset(point.x, point.y);
     textPainter.layout(maxWidth: size.width);
+
+    final degrees = orientation == Orientation.landscape ? 90 : 0;
+    final radians = degrees * pi / 180;
+
+    canvas
+      ..save()
+      ..translate(point.x, point.y)
+      ..rotate(radians)
+      ..translate(-point.x, -point.y);
 
     // background of text element
     final backgroundPaint = ui.Paint()..color = activeColor ?? Colors.black.withOpacity(0.70);
@@ -411,6 +425,8 @@ class TextEle extends SketchElement {
       canvas,
       position - Offset(textPainter.width / 2, textPainter.height / 2),
     );
+
+    canvas.restore();
   }
 
   @override
