@@ -495,14 +495,21 @@ class SketchController extends ChangeNotifier {
     activeElement = touchedElement;
 
     switch (sketchMode) {
-      // On tap up while text mode, call onEditText and pass a null value for the string value of the text since it is new
+      // On tap up while text mode, call onEditText and
+      // either pass the selected text or null if none to create a new text
       case SketchMode.text:
-        final textValue = touchedElement is TextEle ? touchedElement.text : null;
-        final position = Point(localPosition.dx, localPosition.dy);
+        final touchedElement =
+            inactiveElements.reversed.firstWhereOrNull((e) => e.getHit(localPosition) != null) as TextEle?;
 
-        onEditText?.call(textValue).then((value) {
+        if (touchedElement != null) {
+          inactiveElements = inactiveElements.remove(touchedElement);
+          _activeElement = touchedElement;
+        }
+
+        onEditText?.call(touchedElement?.text).then((value) {
           if (value != null && value.isNotEmpty) {
             final orientation = MediaQuery.of(context).orientation;
+            final position = Point(localPosition.dx, localPosition.dy);
             activeElement = TextEle(value, color, position, orientation: orientation);
             notifyListeners();
             _addChangeToHistory();
