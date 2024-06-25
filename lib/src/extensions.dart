@@ -8,10 +8,31 @@ extension BuildContextExt on BuildContext {
 
 extension PointExt<T extends double> on Point<T> {
   Offset toOffset() => Offset(this.x, this.y);
+
+  bool isBetweenPoints(Point<double> point1, Point<double> point2, double tolerance) {
+    final nearestPoint = this.toOffset().findNearestPointOnLine(point1, point2);
+    final distanceToLine = this.toOffset().distanceTo(nearestPoint);
+
+    return distanceToLine <= tolerance;
+  }
 }
 
 extension OffsetExt on Offset {
   Point<double> toPoint() => Point<double>(this.dx, this.dy);
+
+  /// Returns the distance of the current offset to the [other] offset
+  double distanceTo(Offset other) {
+    var x = dx - other.dx;
+    var y = dy - other.dy;
+    return sqrt(x * x + y * y);
+  }
+
+  /// Returns the offset between the current point and the [point] provider
+  Offset centerFrom(Offset point) {
+    double centerX = (dx + point.dx) / 2;
+    double centerY = (dy + point.dy) / 2;
+    return Offset(centerX, centerY);
+  }
 
   /// Finds the nearest point on a line defined by two points (p1 and p2)
   /// from a given target point.

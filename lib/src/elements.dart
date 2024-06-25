@@ -2,8 +2,10 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:collection/collection.dart';
 import 'package:fast_immutable_collections/fast_immutable_collections.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sketch/src/dashed_path_painter.dart';
 import 'package:sketch/src/element_modifiers.dart';
 import 'package:sketch/src/extensions.dart';
@@ -21,11 +23,15 @@ abstract class DrawableSketchElement implements SketchElement {
 
   final double strokeWidth;
 
-  DrawableSketchElement(
-    this.color,
-    this.lineType,
-    this.strokeWidth,
-  );
+  bool _isActive = false;
+
+  bool get isActive => _isActive;
+
+  set isActive(bool active) {
+    _isActive = active;
+  }
+
+  DrawableSketchElement(this.color, this.lineType, this.strokeWidth);
 
   /// Touch tolerance of sketch element
   double get touchTolerance => strokeWidth + 5;
@@ -355,6 +361,7 @@ class TextEle extends SketchElement {
     this.text,
     this.color,
     this.point, {
+    this.orientation = Orientation.portrait,
     this.hasComputedPosition = false,
   }) : textPainter = TextPainter(
           text: TextSpan(
@@ -381,10 +388,22 @@ class TextEle extends SketchElement {
   /// By default, it is set to [false]
   bool hasComputedPosition;
 
+  /// Determines the orientation of the text element
+  Orientation orientation;
+
   @override
   void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
     final position = Offset(point.x, point.y);
     textPainter.layout(maxWidth: size.width);
+
+    final degrees = orientation == Orientation.landscape ? 90 : 0;
+    final radians = degrees * pi / 180;
+
+    canvas
+      ..save()
+      ..translate(point.x, point.y)
+      ..rotate(radians)
+      ..translate(-point.x, -point.y);
 
     // background of text element
     final backgroundPaint = ui.Paint()..color = activeColor ?? Colors.black.withOpacity(0.70);
@@ -406,6 +425,8 @@ class TextEle extends SketchElement {
       canvas,
       position - Offset(textPainter.width / 2, textPainter.height / 2),
     );
+
+    canvas.restore();
   }
 
   @override
@@ -653,7 +674,7 @@ class PolyEle extends DrawableSketchElement {
         final start = Point<double>(previousPoint.x, previousPoint.y);
         final end = Point<double>(point.x, point.y);
 
-        if (_isBetweenPoints(start, end, hitPoint)) {
+        if (hitPoint.isBetweenPoints(start, end, touchTolerance)) {
           return (start: start, end: end);
         }
       }
@@ -680,19 +701,336 @@ class PolyEle extends DrawableSketchElement {
       return startGotHit ? PolyHitType.start : PolyHitType.end;
     }
   }
+}
 
-  /// Returns true if polyLine is hit between points
-  bool _isBetweenPoints(Point<double> point1, Point<double> point2, Point<double> currentPoint) {
-    final nearestPoint = currentPoint.toOffset().findNearestPointOnLine(point1, point2);
-    final distanceToLine = _getDistanceBetweenPoints(nearestPoint.toPoint(), currentPoint);
+class OvalEle extends DrawableSketchElement {
+  OvalEle(
+    super.color,
+    super.lineType,
+    super.strokeWidth, {
+    required this.points,
+  });
 
-    return distanceToLine <= touchTolerance;
+  factory OvalEle.fromStartPointWithSize({
+    required Offset startPoint,
+    required Offset localPoint,
+    required Color color,
+    required LineType lineType,
+    required double strokeWidth,
+    double size = _defaultCircleSize,
+  }) {
+    final pointBX = localPoint.dx < startPoint.dx ? startPoint.dx - size : startPoint.dx + size;
+    final pointCY = localPoint.dy < startPoint.dy ? startPoint.dy - size : startPoint.dy + size;
+
+    return OvalEle(
+      color,
+      lineType,
+      strokeWidth,
+      points: QuadPoints(
+        pointA: startPoint,
+        pointB: Offset(pointBX, startPoint.dy),
+        pointC: Offset(startPoint.dx, pointCY),
+        pointD: Offset(pointBX, pointCY),
+      ),
+    );
   }
 
-  double _getDistanceBetweenPoints(Point<double> p1, Point<double> p2) {
-    double dx = p1.x - p2.x;
-    double dy = p1.y - p2.y;
-    return sqrt(dx * dx + dy * dy);
+  final QuadPoints points;
+
+  static const _defaultCircleSize = 150.0;
+
+  List<Offset?> get midPoints =>
+      points.lineEndPoints.map((e) => getMidPoint(e.start.toOffset(), e.end.toOffset())).toList();
+
+  // If distance between two points is less than the sum size of 2 points, don't show midPoint
+  Offset? getMidPoint(Offset point1, Offset point2) {
+    final distance = point1.distanceTo(point2);
+    final pointDiameter = touchToleranceRadius * 2;
+
+    return (distance / 2) >= pointDiameter ? point1.centerFrom(point2) : null;
+  }
+
+  void _drawActiveElementPoints({required ui.Canvas canvas, required Color color}) {
+    final activeElementInnerEndPaint = Paint()..color = color.withOpacity(0.8);
+    final activeElementOuterEndPaint = Paint()..color = color.withOpacity(0.5);
+
+    final allPoints = [...points.allPoints, ...midPoints.nonNulls];
+    for (final point in allPoints) {
+      canvas.drawCircle(
+        point,
+        10,
+        activeElementInnerEndPaint,
+      );
+
+      canvas.drawCircle(
+        point,
+        touchToleranceRadius,
+        activeElementOuterEndPaint,
+      );
+    }
+  }
+
+  int _getSelectedCornerPointIndex(Offset offset) =>
+      points.allPoints.indexWhere((element) => element.distanceTo(offset) < touchToleranceRadius);
+
+  int _getSelectedMidPointIndex(Offset offset) =>
+      midPoints.indexWhere((element) => element != null && element.distanceTo(offset) < touchToleranceRadius);
+
+  (OvalHitType hitType, int? selectedPointIndex)? _hitTestWithSelectedPoint(Offset offset) {
+    final rect = Rect.fromPoints(points.pointA, points.pointD);
+
+    if (isActive) {
+      final selectedCornerPointIndex = _getSelectedCornerPointIndex(offset);
+      if (selectedCornerPointIndex >= 0) return (OvalHitType.cornerPoint, selectedCornerPointIndex);
+
+      final selectedMidPointIndex = _getSelectedMidPointIndex(offset);
+      if (selectedMidPointIndex >= 0) return (OvalHitType.midPoint, selectedMidPointIndex);
+
+      if (_isOutlineHit(offset)) return (OvalHitType.outline, null);
+    }
+    if (_isOvalHit(rect, offset)) return (OvalHitType.oval, null);
+
+    return null;
+  }
+
+  /// Checks hit on oval from current [offset]
+  /// Returns true if the offset is more than the inner distance from center and less than the outer distance from center
+  bool _isOvalHit(Rect rect, Offset offset) {
+    final center = Offset(rect.left + rect.width / 2, rect.top + rect.height / 2);
+
+    // Radii for the inner ellipse plus stroke width
+    // Calculate the distance from the point to the center relative to inner ellipse radii
+    final innerRadiiX = rect.width / 2 - strokeWidth; // radius in x direction
+    final innerRadiiY = rect.height / 2 - strokeWidth; // radius in y direction
+    final innerDistanceX = (offset.dx - center.dx) / innerRadiiX;
+    final innerDistanceY = (offset.dy - center.dy) / innerRadiiY;
+
+    // Radii for the ellipse minus stroke width
+    // Calculate the distance from the point to the center relative to ellipse radii
+    final outerRadiiX = rect.width / 2 + strokeWidth; // radius in x direction
+    final outerRadiiY = rect.height / 2 + strokeWidth; // radius in y direction
+    final outerDistanceX = (offset.dx - center.dx) / outerRadiiX;
+    final outerDistanceY = (offset.dy - center.dy) / outerRadiiY;
+
+    final maxOutlineToCenter = pow(outerDistanceX, 2) + pow(outerDistanceY, 2);
+    final minOutlineToCenter = pow(innerDistanceX, 2) + pow(innerDistanceY, 2);
+
+    return minOutlineToCenter >= 1 && maxOutlineToCenter <= 1;
+  }
+
+  bool _isOutlineHit(Offset offset) => points.lineEndPoints.any((element) => offset.toPoint().isBetweenPoints(
+        element.start,
+        element.end,
+        touchTolerance,
+      ));
+
+  @override
+  void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
+    final rect = Rect.fromPoints(points.pointA, points.pointD);
+    final path = Path();
+
+    // Create a square Rect with adjusted width and height for a circle
+    path.addOval(rect);
+
+    switch (lineType) {
+      case LineType.dashed:
+      case LineType.dotted:
+        DashedPathPainter(
+          originalPath: path,
+          pathColor: activeColor ?? color,
+          strokeWidth: strokeWidth,
+          dashGapLength: strokeWidth * lineType.dashGapLengthFactor,
+          dashLength: strokeWidth * lineType.dashLengthFactor,
+        ).paint(canvas, size);
+        break;
+      default:
+        final paint = Paint()
+          ..color = activeColor ?? color
+          ..strokeWidth = strokeWidth
+          ..style = PaintingStyle.stroke;
+        canvas.drawPath(path, paint);
+    }
+
+    if (activeColor != null) {
+      path.addRect(rect);
+      DashedPathPainter(
+        originalPath: path,
+        pathColor: activeColor,
+        strokeWidth: 5,
+        dashGapLength: 15,
+        dashLength: 15,
+      ).paint(canvas, size);
+
+      _drawActiveElementPoints(canvas: canvas, color: activeColor);
+    }
+  }
+
+  @override
+  HitPointOval? getHit(ui.Offset offset) {
+    final hitTypeWithSelectedPoint = _hitTestWithSelectedPoint(offset);
+
+    if (hitTypeWithSelectedPoint == null) return null;
+
+    return HitPointOval(
+      this,
+      offset,
+      hitTypeWithSelectedPoint.$1,
+      selectedPointIndex: hitTypeWithSelectedPoint.$2,
+    );
+  }
+
+  @override
+  SketchElement create(ui.Offset updateOffset) {
+    // TODO: implement create
+    throw UnimplementedError();
+  }
+
+  @override
+  SketchElement update(ui.Offset updateOffset, HitPoint hitPoint) {
+    if (hitPoint is! HitPointOval) return this;
+
+    switch (hitPoint.hitType) {
+      case OvalHitType.cornerPoint:
+        final hitPointCircleElement = hitPoint.element as OvalEle;
+        final selectedPointIndex = hitPoint.selectedPointIndex;
+
+        if (selectedPointIndex == null) return this;
+
+        final initialSelectedPoint = hitPointCircleElement.points.allPoints[selectedPointIndex];
+        final anchorPoint = hitPointCircleElement.points.allPoints.firstWhereOrNull(
+            (element) => element.dx != initialSelectedPoint.dx && element.dy != initialSelectedPoint.dy);
+
+        // Don't do anything if there is no position adjustment for the selected point Or if anchor point is null
+        if (initialSelectedPoint == updateOffset || anchorPoint == null) return this;
+
+        // Get center point of the oval
+        final centerPoint = Offset(
+          points.allPoints.map((e) => e.dx).average,
+          points.allPoints.map((e) => e.dy).average,
+        );
+
+        final diffX = updateOffset.dx - initialSelectedPoint.dx;
+        final diffY = updateOffset.dy - initialSelectedPoint.dy;
+
+        // Calculate the additional distance from the selected point to the current point
+        final additionalDistance = sqrt((pow(diffX, 2) + pow(diffY, 2)));
+
+        final centerToAnchor = centerPoint.distanceTo(anchorPoint);
+        final centerToInitial = centerPoint.distanceTo(initialSelectedPoint);
+
+        // Check if interaction is scaling up (moving outward from the selected point) or scaling down (moving inward)
+        final isScalingUp = updateOffset.distanceTo(anchorPoint) > updateOffset.distanceTo(initialSelectedPoint)
+            ? anchorPoint.distanceTo(initialSelectedPoint) <= anchorPoint.distanceTo(updateOffset)
+            : centerToAnchor > centerToInitial;
+
+        final initialDistanceFromAnchorPoint = anchorPoint.distanceTo(initialSelectedPoint);
+
+        // Growth factor will decide if the new point would be scaled up or scaled down
+        final growthFactor = isScalingUp
+            ? ((initialDistanceFromAnchorPoint + additionalDistance) / initialDistanceFromAnchorPoint)
+            : additionalDistance / initialDistanceFromAnchorPoint;
+
+        final oppositePointX = isScalingUp ? anchorPoint.dx : initialSelectedPoint.dx;
+        final sourcePointX = isScalingUp ? initialSelectedPoint.dx : anchorPoint.dx;
+
+        final oppositePointY = isScalingUp ? anchorPoint.dy : initialSelectedPoint.dy;
+        final sourcePointY = isScalingUp ? initialSelectedPoint.dy : anchorPoint.dy;
+
+        // Calculate on new X and Y based on the growth factor, opposite point, and sourcePoint
+        final newX = growthFactor * (sourcePointX - oppositePointX) + oppositePointX;
+        final newY = growthFactor * (sourcePointY - oppositePointY) + oppositePointY;
+
+        final currentSelectedPoint = points.allPoints[selectedPointIndex];
+
+        // Update the selected point with the new one
+        // Also update the points beside the selected point
+        final updatedPoints = points.allPoints
+            .map((currentPoint) {
+              if (currentPoint == currentSelectedPoint) {
+                return Offset(newX, newY);
+              } else if (currentPoint.dx == currentSelectedPoint.dx) {
+                return Offset(newX, currentPoint.dy);
+              } else if (currentPoint.dy == currentSelectedPoint.dy) {
+                return Offset(currentPoint.dx, newY);
+              } else {
+                return currentPoint;
+              }
+            })
+            .nonNulls
+            .toList();
+
+        return OvalEle(
+          color,
+          lineType,
+          strokeWidth,
+          points: QuadPoints(
+            pointA: updatedPoints[0],
+            pointB: updatedPoints[1],
+            pointC: updatedPoints[2],
+            pointD: updatedPoints[3],
+          ),
+        );
+
+      case OvalHitType.midPoint:
+        final selectedPointIndex = hitPoint.selectedPointIndex;
+
+        if (selectedPointIndex == null) return this;
+
+        final selectedMidPoint = midPoints[selectedPointIndex];
+
+        if (selectedMidPoint == null) return this;
+
+        final updatedPoints = points.allPoints
+            .map((currentPoint) {
+              // Check if X should be updated
+              if (selectedMidPoint.dx == currentPoint.dx && selectedMidPoint.dy != currentPoint.dy) {
+                return Offset(updateOffset.dx, currentPoint.dy);
+              }
+              // Check if Y should be updated
+              else if (selectedMidPoint.dy == currentPoint.dy && selectedMidPoint.dx != currentPoint.dx) {
+                return Offset(currentPoint.dx, updateOffset.dy);
+              } else {
+                return currentPoint;
+              }
+            })
+            .nonNulls
+            .toList();
+
+        return OvalEle(
+          color,
+          lineType,
+          strokeWidth,
+          points: QuadPoints(
+            pointA: updatedPoints[0],
+            pointB: updatedPoints[1],
+            pointC: updatedPoints[2],
+            pointD: updatedPoints[3],
+          ),
+        );
+      case OvalHitType.outline:
+      case OvalHitType.oval:
+        final hitPointCircleElement = hitPoint.element as OvalEle;
+        final initialTouchPoint = hitPoint.hitOffset;
+        final initialPoints = hitPointCircleElement.points;
+
+        final additionalX = updateOffset.dx - initialTouchPoint.dx;
+        final additionalY = updateOffset.dy - initialTouchPoint.dy;
+
+        final updatedPoints =
+            initialPoints.allPoints.map((e) => Offset(e.dx + additionalX, e.dy + additionalY)).toList();
+
+        return OvalEle(
+          color,
+          lineType,
+          strokeWidth,
+          points: QuadPoints(
+            pointA: updatedPoints[0],
+            pointB: updatedPoints[1],
+            pointC: updatedPoints[2],
+            pointD: updatedPoints[3],
+          ),
+        );
+    }
   }
 }
 
@@ -710,6 +1048,37 @@ mixin Hitable {
 
   ///
   SketchElement create(ui.Offset updateOffset);
+}
+
+class QuadPoints {
+  QuadPoints({
+    required this.pointA,
+    required this.pointB,
+    required this.pointC,
+    required this.pointD,
+  });
+
+  /// The first point where the user tapped on the screen
+  final Offset pointA;
+
+  /// The point opposite to [pointA]
+  final Offset pointB;
+
+  /// The point opposite to [pointD]
+  final Offset pointC;
+
+  /// The point diagonally opposite to [pointA]
+  final Offset pointD;
+
+  /// Returns the list of all the points
+  List<Offset> get allPoints => [pointA, pointB, pointC, pointD];
+
+  List<EndPoints> get lineEndPoints => [
+        (start: pointA.toPoint(), end: pointB.toPoint()),
+        (start: pointA.toPoint(), end: pointC.toPoint()),
+        (start: pointB.toPoint(), end: pointD.toPoint()),
+        (start: pointC.toPoint(), end: pointD.toPoint()),
+      ];
 }
 
 sealed class HitPoint {
@@ -760,6 +1129,21 @@ class HitPointText extends HitPoint {
   );
 }
 
+class HitPointOval extends HitPoint {
+  HitPointOval(
+    super.element,
+    super.hitOffset,
+    this.hitType, {
+    this.selectedPointIndex,
+  });
+
+  final OvalHitType hitType;
+
+  final int? selectedPointIndex;
+}
+
+enum OvalHitType { oval, outline, midPoint, cornerPoint }
+
 enum LineHitType { start, end, line }
 
 enum PolyHitType { start, end, line, midPoints }
@@ -770,11 +1154,7 @@ extension Editable on SketchElement {
   (Color?, LineType?, double?) getEditableValues() {
     final SketchElement element = this;
     switch (element) {
-      case LineEle():
-        return (element.color, element.lineType, element.strokeWidth);
-      case PathEle():
-        return (element.color, element.lineType, element.strokeWidth);
-      case PolyEle():
+      case DrawableSketchElement():
         return (element.color, element.lineType, element.strokeWidth);
       case _:
         return (null, null, null);

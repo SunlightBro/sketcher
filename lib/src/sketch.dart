@@ -146,7 +146,7 @@ class _SketchWidgetState extends State<SketchWidget> {
                 CustomPaint(
                   willChange: true,
                   isComplex: true,
-                  painter: SketchPainter(controller.elements),
+                  painter: SketchPainter(controller.inactiveElements),
                   foregroundPainter: ActivePainter(controller.activeElement),
                   child: Container(),
                 ),
