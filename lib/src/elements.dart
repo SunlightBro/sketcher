@@ -361,7 +361,7 @@ class TextEle extends SketchElement {
     this.text,
     this.color,
     this.point, {
-    this.deviceOrientation = DeviceOrientation.portraitUp,
+    this.orientation = Orientation.portrait,
     this.hasComputedPosition = false,
   }) : textPainter = TextPainter(
           text: TextSpan(
@@ -389,17 +389,14 @@ class TextEle extends SketchElement {
   bool hasComputedPosition;
 
   /// Determines the orientation of the text element
-  DeviceOrientation deviceOrientation;
+  Orientation orientation;
 
   @override
   void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
     final position = Offset(point.x, point.y);
     textPainter.layout(maxWidth: size.width);
 
-    final degrees = switch (deviceOrientation) {
-      DeviceOrientation.landscapeLeft || DeviceOrientation.landscapeRight => 90,
-      _ => 0,
-    };
+    final degrees = orientation == Orientation.landscape ? 90 : 0;
     final radians = degrees * pi / 180;
 
     canvas
