@@ -416,6 +416,16 @@ class SketchController extends ChangeNotifier {
     }
   }
 
+  /// Updates all text elements' orientation either in [inactiveElements] and/or the [_activeElement]
+  void setTextElementsOrientation(Orientation orientation) {
+    final activeElement = _activeElement;
+    if (activeElement is TextEle) _activeElement = activeElement..orientation = orientation;
+
+    for (final inactiveElement in inactiveElements) {
+      if (inactiveElement is TextEle) inactiveElement.orientation = orientation;
+    }
+  }
+
   /// If there is a touched element upon long press, triggers the [_onEditStart]
   /// Else, proceed with [_onPressStart] handling for the current [sketchMode]
   ///
