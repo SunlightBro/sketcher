@@ -397,8 +397,7 @@ class TextEle extends SketchElement {
     textPainter.layout(maxWidth: size.width);
 
     final degrees = switch (deviceOrientation) {
-      DeviceOrientation.landscapeLeft => 90,
-      DeviceOrientation.landscapeRight => 90 * 3,
+      DeviceOrientation.landscapeLeft || DeviceOrientation.landscapeRight => 90,
       _ => 0,
     };
     final radians = degrees * pi / 180;
