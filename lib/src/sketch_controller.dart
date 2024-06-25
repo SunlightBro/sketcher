@@ -421,9 +421,13 @@ class SketchController extends ChangeNotifier {
     final activeElement = _activeElement;
     if (activeElement is TextEle) _activeElement = activeElement..orientation = orientation;
 
-    for (final inactiveElement in inactiveElements) {
-      if (inactiveElement is TextEle) inactiveElement.orientation = orientation;
-    }
+    inactiveElements = inactiveElements.map((element) {
+      if (element is TextEle) {
+        return element..orientation = orientation;
+      } else {
+        return element;
+      }
+    }).toIList();
   }
 
   /// If there is a touched element upon long press, triggers the [_onEditStart]
