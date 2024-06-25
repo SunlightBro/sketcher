@@ -125,7 +125,7 @@ class _SketchWidgetState extends State<SketchWidget> {
             setState(() => panPosition = null);
             controller.onLongPressEnd(details);
           },
-          onTapUp: (TapUpDetails details) => controller.onTapUp(details.localPosition),
+          onTapUp: (TapUpDetails details) => controller.onTapUp(context, details.localPosition),
           onTapDown: (TapDownDetails details) => controller.onTapDown(details.localPosition),
           child: AspectRatio(
             aspectRatio: initialAspectRatio != null

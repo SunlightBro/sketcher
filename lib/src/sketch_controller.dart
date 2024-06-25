@@ -486,7 +486,7 @@ class SketchController extends ChangeNotifier {
     _initialTouchPoint = localPosition;
   }
 
-  void onTapUp(Offset localPosition) {
+  void onTapUp(BuildContext context, Offset localPosition) {
     final touchedElement = _getTouchedElementFromAllElements(localPosition);
 
     _clearInitialTouchPoint();
@@ -508,8 +508,9 @@ class SketchController extends ChangeNotifier {
 
         onEditText?.call(touchedElement?.text).then((value) {
           if (value != null && value.isNotEmpty) {
+            final orientation = MediaQuery.of(context).orientation;
             final position = Point(localPosition.dx, localPosition.dy);
-            activeElement = TextEle(value, color, position);
+            activeElement = TextEle(value, color, position, orientation: orientation);
             notifyListeners();
             _addChangeToHistory();
           }
@@ -544,7 +545,8 @@ class SketchController extends ChangeNotifier {
             final position = Point(localPosition.dx, localPosition.dy);
             onEditText?.call(touchedElement.text).then((value) {
               if (value != null && value.isNotEmpty) {
-                activeElement = TextEle(value, color, position);
+                final orientation = MediaQuery.of(context).orientation;
+                activeElement = TextEle(value, color, position, orientation: orientation);
                 notifyListeners();
                 _addChangeToHistory();
               }
