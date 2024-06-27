@@ -206,14 +206,14 @@ class SketchController extends ChangeNotifier {
           );
         case OvalEle():
           activeElement = OvalEle(
-            points: element.points,
+            quadPoints: element.quadPoints,
             color,
             element.lineType,
             element.strokeWidth,
           );
         case RectEle():
           activeElement = RectEle(
-            points: element.points,
+            quadPoints: element.quadPoints,
             color,
             element.lineType,
             element.strokeWidth,
@@ -264,14 +264,14 @@ class SketchController extends ChangeNotifier {
             color,
             lineType.isArrow ? element.lineType : lineType,
             strokeWidth,
-            points: element.points,
+            quadPoints: element.quadPoints,
           );
         case RectEle():
           activeElement = RectEle(
             color,
             lineType.isArrow ? element.lineType : lineType,
             strokeWidth,
-            points: element.points,
+            quadPoints: element.quadPoints,
           );
         case _:
       }
@@ -318,14 +318,14 @@ class SketchController extends ChangeNotifier {
             color,
             lineType,
             strokeWidth,
-            points: element.points,
+            quadPoints: element.quadPoints,
           );
         case RectEle():
           activeElement = RectEle(
             color,
             lineType,
             strokeWidth,
-            points: element.points,
+            quadPoints: element.quadPoints,
           );
         case _:
       }
@@ -568,13 +568,13 @@ class SketchController extends ChangeNotifier {
                   color,
                   lineType,
                   strokeWidth,
-                  points: QuadPoints.rectFromSize(startPoint: localPosition, localPoint: localPosition),
+                  quadPoints: QuadPoints.rectFromSize(startPoint: localPosition, localPoint: localPosition),
                 )
               : RectEle(
                   color,
                   lineType,
                   strokeWidth,
-                  points: QuadPoints.rectFromSize(startPoint: localPosition, localPoint: localPosition),
+                  quadPoints: QuadPoints.rectFromSize(startPoint: localPosition, localPoint: localPosition),
                 );
 
           inactiveElements = inactiveElements.add(newElement);
@@ -807,7 +807,7 @@ class SketchController extends ChangeNotifier {
           color,
           lineType,
           strokeWidth,
-          points: QuadPoints.rectFromSize(
+          quadPoints: QuadPoints.rectFromSize(
             startPoint: startPoint.toOffset(),
             localPoint: localPosition,
             size: 0,
@@ -818,7 +818,7 @@ class SketchController extends ChangeNotifier {
           color,
           lineType,
           strokeWidth,
-          points: QuadPoints.rectFromSize(
+          quadPoints: QuadPoints.rectFromSize(
             startPoint: startPoint.toOffset(),
             localPoint: localPosition,
             size: 0,
@@ -880,15 +880,15 @@ class SketchController extends ChangeNotifier {
 
         if (circleElement == null) return;
 
-        final size = max((localPosition.dx - circleElement.points.pointA.dx).abs(),
-            (localPosition.dy - circleElement.points.pointA.dy).abs());
+        final size = max((localPosition.dx - circleElement.quadPoints.pointA.dx).abs(),
+            (localPosition.dy - circleElement.quadPoints.pointA.dy).abs());
 
         activeElement = OvalEle(
           color,
           lineType,
           strokeWidth,
-          points: QuadPoints.rectFromSize(
-            startPoint: circleElement.points.pointA,
+          quadPoints: QuadPoints.rectFromSize(
+            startPoint: circleElement.quadPoints.pointA,
             localPoint: localPosition,
             size: size,
           ),
@@ -901,15 +901,15 @@ class SketchController extends ChangeNotifier {
 
         if (rectElement == null) return;
 
-        final size = max((localPosition.dx - rectElement.points.pointA.dx).abs(),
-            (localPosition.dy - rectElement.points.pointA.dy).abs());
+        final size = max((localPosition.dx - rectElement.quadPoints.pointA.dx).abs(),
+            (localPosition.dy - rectElement.quadPoints.pointA.dy).abs());
 
         activeElement = RectEle(
           color,
           lineType,
           strokeWidth,
-          points: QuadPoints.rectFromSize(
-            startPoint: rectElement.points.pointA,
+          quadPoints: QuadPoints.rectFromSize(
+            startPoint: rectElement.quadPoints.pointA,
             localPoint: localPosition,
             size: size,
           ),

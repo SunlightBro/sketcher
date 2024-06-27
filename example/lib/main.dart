@@ -35,7 +35,7 @@ final IList<SketchElement> samples = IList([
     Colors.blue,
     LineType.dotted,
     10,
-    points: QuadPoints(
+    quadPoints: QuadPoints(
       pointA: Offset(20, 120),
       pointB: Offset(120, 120),
       pointC: Offset(20, 320),

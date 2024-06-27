@@ -39,6 +39,24 @@ abstract class DrawableSketchElement implements SketchElement {
   double get touchToleranceRadius => 20;
 }
 
+abstract class ShapeSketchElement extends DrawableSketchElement {
+  final QuadPoints quadPoints;
+
+  ShapeSketchElement(super.color, super.lineType, super.strokeWidth, {required this.quadPoints});
+
+  /// Returns the [midPoints]
+  /// Midpoint is the point in between the line endPoints of the [quadPoints]
+  List<Offset?> get midPoints => quadPoints.lineEndPoints.map((e) => getMidPoint(e.start, e.end)).toList();
+
+  // If distance between two points is less than the sum size of 2 points, don't show midPoint
+  Offset? getMidPoint(Offset point1, Offset point2) {
+    final distance = point1.distanceTo(point2);
+    final pointDiameter = touchToleranceRadius * 2;
+
+    return (distance / 2) >= pointDiameter ? point1.centerFrom(point2) : null;
+  }
+}
+
 /// Draws an arrow head at the given point [arrowHeadPoint]
 void _drawArrowHead({
   required ui.Paint paint,
@@ -704,17 +722,15 @@ class PolyEle extends DrawableSketchElement {
   }
 }
 
-class OvalEle extends DrawableSketchElement {
+class OvalEle extends ShapeSketchElement {
   OvalEle(
     super.color,
     super.lineType,
     super.strokeWidth, {
-    required this.points,
+    required super.quadPoints,
   });
 
-  final QuadPoints points;
-
-  List<Offset?> get midPoints => points.lineEndPoints.map((e) => getMidPoint(e.start, e.end)).toList();
+  List<Offset?> get midPoints => quadPoints.lineEndPoints.map((e) => getMidPoint(e.start, e.end)).toList();
 
   // If distance between two points is less than the sum size of 2 points, don't show midPoint
   Offset? getMidPoint(Offset point1, Offset point2) {
@@ -728,7 +744,7 @@ class OvalEle extends DrawableSketchElement {
     final activeElementInnerEndPaint = Paint()..color = color.withOpacity(0.8);
     final activeElementOuterEndPaint = Paint()..color = color.withOpacity(0.5);
 
-    final allPoints = [...points.allPoints, ...midPoints.nonNulls];
+    final allPoints = [...quadPoints.allPoints, ...midPoints.nonNulls];
     for (final point in allPoints) {
       canvas.drawCircle(
         point,
@@ -745,13 +761,13 @@ class OvalEle extends DrawableSketchElement {
   }
 
   int _getSelectedCornerPointIndex(Offset offset) =>
-      points.allPoints.indexWhere((element) => element.distanceTo(offset) < touchToleranceRadius);
+      quadPoints.allPoints.indexWhere((element) => element.distanceTo(offset) < touchToleranceRadius);
 
   int _getSelectedMidPointIndex(Offset offset) =>
       midPoints.indexWhere((element) => element != null && element.distanceTo(offset) < touchToleranceRadius);
 
   (OvalHitType hitType, int? selectedPointIndex)? _hitTestWithSelectedPoint(Offset offset) {
-    final rect = Rect.fromPoints(points.pointA, points.pointD);
+    final rect = Rect.fromPoints(quadPoints.pointA, quadPoints.pointD);
 
     if (isActive) {
       final selectedCornerPointIndex = _getSelectedCornerPointIndex(offset);
@@ -792,7 +808,7 @@ class OvalEle extends DrawableSketchElement {
     return minOutlineToCenter >= 1 && maxOutlineToCenter <= 1;
   }
 
-  bool _isOutlineHit(Offset offset) => points.lineEndPoints.any((element) => offset.toPoint().isBetweenPoints(
+  bool _isOutlineHit(Offset offset) => quadPoints.lineEndPoints.any((element) => offset.toPoint().isBetweenPoints(
         element.start.toPoint(),
         element.end.toPoint(),
         touchTolerance,
@@ -800,7 +816,7 @@ class OvalEle extends DrawableSketchElement {
 
   @override
   void draw(ui.Canvas canvas, ui.Size size, [Color? activeColor]) {
-    final rect = Rect.fromPoints(points.pointA, points.pointD);
+    final rect = Rect.fromPoints(quadPoints.pointA, quadPoints.pointD);
     final pathOval = Path();
 
     // Create a square Rect with adjusted width and height for a circle
@@ -871,8 +887,8 @@ class OvalEle extends DrawableSketchElement {
 
         if (selectedPointIndex == null) return this;
 
-        final initialSelectedPoint = hitPointCircleElement.points.allPoints[selectedPointIndex];
-        final anchorPoint = hitPointCircleElement.points.allPoints.firstWhereOrNull(
+        final initialSelectedPoint = hitPointCircleElement.quadPoints.allPoints[selectedPointIndex];
+        final anchorPoint = hitPointCircleElement.quadPoints.allPoints.firstWhereOrNull(
             (element) => element.dx != initialSelectedPoint.dx && element.dy != initialSelectedPoint.dy);
 
         // Don't do anything if there is no position adjustment for the selected point Or if anchor point is null
@@ -880,8 +896,8 @@ class OvalEle extends DrawableSketchElement {
 
         // Get center point of the oval
         final centerPoint = Offset(
-          points.allPoints.map((e) => e.dx).average,
-          points.allPoints.map((e) => e.dy).average,
+          quadPoints.allPoints.map((e) => e.dx).average,
+          quadPoints.allPoints.map((e) => e.dy).average,
         );
 
         final diffX = updateOffset.dx - initialSelectedPoint.dx;
@@ -915,11 +931,11 @@ class OvalEle extends DrawableSketchElement {
         final newX = growthFactor * (sourcePointX - oppositePointX) + oppositePointX;
         final newY = growthFactor * (sourcePointY - oppositePointY) + oppositePointY;
 
-        final currentSelectedPoint = points.allPoints[selectedPointIndex];
+        final currentSelectedPoint = quadPoints.allPoints[selectedPointIndex];
 
         // Update the selected point with the new one
         // Also update the points beside the selected point
-        final updatedPoints = points.allPoints
+        final updatedPoints = quadPoints.allPoints
             .map((currentPoint) {
               if (currentPoint == currentSelectedPoint) {
                 return Offset(newX, newY);
@@ -938,7 +954,7 @@ class OvalEle extends DrawableSketchElement {
           color,
           lineType,
           strokeWidth,
-          points: QuadPoints(
+          quadPoints: QuadPoints(
             pointA: updatedPoints[0],
             pointB: updatedPoints[1],
             pointC: updatedPoints[2],
@@ -956,7 +972,7 @@ class OvalEle extends DrawableSketchElement {
 
         if (selectedMidPoint == null) return this;
 
-        final updatedPoints = hitPointCircleElement.points.allPoints
+        final updatedPoints = hitPointCircleElement.quadPoints.allPoints
             .map((currentPoint) {
               // Check if X should be updated
               if (selectedMidPoint.dx == currentPoint.dx && selectedMidPoint.dy != currentPoint.dy) {
@@ -976,7 +992,7 @@ class OvalEle extends DrawableSketchElement {
           color,
           lineType,
           strokeWidth,
-          points: QuadPoints(
+          quadPoints: QuadPoints(
             pointA: updatedPoints[0],
             pointB: updatedPoints[1],
             pointC: updatedPoints[2],
@@ -987,7 +1003,7 @@ class OvalEle extends DrawableSketchElement {
       case OvalHitType.oval:
         final hitPointCircleElement = hitPoint.element as OvalEle;
         final initialTouchPoint = hitPoint.hitOffset;
-        final initialPoints = hitPointCircleElement.points;
+        final initialPoints = hitPointCircleElement.quadPoints;
 
         final additionalX = updateOffset.dx - initialTouchPoint.dx;
         final additionalY = updateOffset.dy - initialTouchPoint.dy;
@@ -999,7 +1015,7 @@ class OvalEle extends DrawableSketchElement {
           color,
           lineType,
           strokeWidth,
-          points: QuadPoints(
+          quadPoints: QuadPoints(
             pointA: updatedPoints[0],
             pointB: updatedPoints[1],
             pointC: updatedPoints[2],
@@ -1010,30 +1026,18 @@ class OvalEle extends DrawableSketchElement {
   }
 }
 
-class RectEle extends DrawableSketchElement {
+class RectEle extends ShapeSketchElement {
   RectEle(
     super.color,
     super.lineType,
     super.strokeWidth, {
-    required this.points,
+    required super.quadPoints,
   });
-
-  final QuadPoints points;
-
-  List<Offset?> get midPoints => points.lineEndPoints.map((e) => _getMidPoint(e.start, e.end)).toList();
-
-  // If distance between two points is less than the sum size of 2 points, don't show midPoint
-  Offset? _getMidPoint(Offset point1, Offset point2) {
-    final distance = point1.distanceTo(point2);
-    final pointDiameter = touchToleranceRadius * 2;
-
-    return (distance / 2) >= pointDiameter ? point1.centerFrom(point2) : null;
-  }
 
   void _drawActiveElementPoints({required ui.Canvas canvas, required Color color}) {
     final activeElementInnerEndPaint = Paint()..color = color.withOpacity(0.8);
     final activeElementOuterEndPaint = Paint()..color = color.withOpacity(0.5);
-    final allPoints = [...points.allPoints, ...midPoints.nonNulls];
+    final allPoints = [...quadPoints.allPoints, ...midPoints.nonNulls];
 
     for (final point in allPoints) {
       canvas.drawCircle(
@@ -1051,7 +1055,7 @@ class RectEle extends DrawableSketchElement {
   }
 
   int _getSelectedCornerPointIndex(Offset offset) =>
-      points.allPoints.indexWhere((element) => element.distanceTo(offset) < touchToleranceRadius);
+      quadPoints.allPoints.indexWhere((element) => element.distanceTo(offset) < touchToleranceRadius);
 
   int _getSelectedMidPointIndex(Offset offset) =>
       midPoints.indexWhere((element) => element != null && element.distanceTo(offset) < touchToleranceRadius);
@@ -1068,7 +1072,7 @@ class RectEle extends DrawableSketchElement {
     return null;
   }
 
-  bool _isLineHit(Offset offset) => points.lineEndPoints.any((element) => offset.toPoint().isBetweenPoints(
+  bool _isLineHit(Offset offset) => quadPoints.lineEndPoints.any((element) => offset.toPoint().isBetweenPoints(
         element.start.toPoint(),
         element.end.toPoint(),
         touchTolerance,
@@ -1079,10 +1083,10 @@ class RectEle extends DrawableSketchElement {
     final currentColor = activeColor ?? color;
     final path = Path();
 
-    path.moveTo(points.pointA.dx, points.pointA.dy);
-    path.lineTo(points.pointB.dx, points.pointB.dy);
-    path.lineTo(points.pointD.dx, points.pointD.dy);
-    path.lineTo(points.pointC.dx, points.pointC.dy);
+    path.moveTo(quadPoints.pointA.dx, quadPoints.pointA.dy);
+    path.lineTo(quadPoints.pointB.dx, quadPoints.pointB.dy);
+    path.lineTo(quadPoints.pointD.dx, quadPoints.pointD.dy);
+    path.lineTo(quadPoints.pointC.dx, quadPoints.pointC.dy);
 
     path.close();
 
@@ -1143,14 +1147,14 @@ class RectEle extends DrawableSketchElement {
 
         if (selectedPointIndex == null) return this;
 
-        final selectedPoint = points.allPoints[selectedPointIndex];
-        final updatedPoints = points.allPoints.map((e) => e == selectedPoint ? updateOffset : e).toList();
+        final selectedPoint = quadPoints.allPoints[selectedPointIndex];
+        final updatedPoints = quadPoints.allPoints.map((e) => e == selectedPoint ? updateOffset : e).toList();
 
         return RectEle(
           color,
           lineType,
           strokeWidth,
-          points: QuadPoints(
+          quadPoints: QuadPoints(
             pointA: updatedPoints[0],
             pointB: updatedPoints[1],
             pointC: updatedPoints[2],
@@ -1160,7 +1164,7 @@ class RectEle extends DrawableSketchElement {
       case RectHitType.midPoint:
         final selectedPointIndex = hitPoint.selectedPointIndex;
         final hitPointRectElement = hitPoint.element as RectEle;
-        final initialPoints = hitPointRectElement.points;
+        final initialPoints = hitPointRectElement.quadPoints;
         final selectedMidPoint = selectedPointIndex != null ? hitPointRectElement.midPoints[selectedPointIndex] : null;
 
         if (selectedMidPoint == null) return this;
@@ -1185,7 +1189,7 @@ class RectEle extends DrawableSketchElement {
           color,
           lineType,
           strokeWidth,
-          points: QuadPoints(
+          quadPoints: QuadPoints(
             pointA: updatedPoints[0],
             pointB: updatedPoints[1],
             pointC: updatedPoints[2],
@@ -1196,7 +1200,7 @@ class RectEle extends DrawableSketchElement {
       case RectHitType.line:
         final hitPointRectElement = hitPoint.element as RectEle;
         final initialTouchPoint = hitPoint.hitOffset;
-        final initialPoints = hitPointRectElement.points;
+        final initialPoints = hitPointRectElement.quadPoints;
 
         final additionalX = updateOffset.dx - initialTouchPoint.dx;
         final additionalY = updateOffset.dy - initialTouchPoint.dy;
@@ -1208,7 +1212,7 @@ class RectEle extends DrawableSketchElement {
           color,
           lineType,
           strokeWidth,
-          points: QuadPoints(
+          quadPoints: QuadPoints(
             pointA: updatedPoints[0],
             pointB: updatedPoints[1],
             pointC: updatedPoints[2],
