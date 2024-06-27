@@ -65,6 +65,8 @@ void _drawArrowHead({
 }
 
 EndPoints _reduceLineLength(Point<double> startPoint, Point<double> endPoint, double reductionSize) {
+  if (startPoint == endPoint) return (start: startPoint, end: endPoint);
+
   // Calculate the vector representing the line direction
   final lineVectorX = endPoint.x - startPoint.x;
   final lineVectorY = endPoint.y - startPoint.y;

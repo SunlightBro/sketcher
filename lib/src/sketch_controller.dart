@@ -22,6 +22,8 @@ enum SketchMode {
 /// Max number of rows for the auto added text elements
 const _maxAutoAddTextLength = 8;
 
+const _sketchModeWithoutArrows = [SketchMode.rect, SketchMode.oval, SketchMode.path];
+
 class SketchController extends ChangeNotifier {
   SketchController({
     this.inactiveElements = const IListConst([]),
@@ -161,6 +163,12 @@ class SketchController extends ChangeNotifier {
     // prevent selection throughout the sketch modes
     deactivateActiveElement();
     _sketchMode = sketchMode;
+
+    // If the line type is an arrow and the selected sketch mode doesn't support arrow line types,
+    // set the line style to "full"
+    if (_sketchModeWithoutArrows.contains(sketchMode) && lineType.isArrow) {
+      lineType = LineType.full;
+    }
   }
 
   /// Sets color for activeElement or, in case no
