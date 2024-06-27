@@ -34,6 +34,11 @@ class SketchModeSwitch extends StatelessWidget {
             value: SketchMode.oval,
           ),
           ButtonSegment(
+            icon: Icon(Icons.square_outlined),
+            label: Text("Rect Mode"),
+            value: SketchMode.rect,
+          ),
+          ButtonSegment(
             icon: Icon(Icons.draw_outlined),
             label: Text("Path Mode"),
             value: SketchMode.path,

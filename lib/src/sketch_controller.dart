@@ -16,6 +16,7 @@ enum SketchMode {
   text,
   edit,
   oval,
+  rect,
 }
 
 /// Max number of rows for the auto added text elements
@@ -202,6 +203,13 @@ class SketchController extends ChangeNotifier {
             element.lineType,
             element.strokeWidth,
           );
+        case RectEle():
+          activeElement = RectEle(
+            points: element.points,
+            color,
+            element.lineType,
+            element.strokeWidth,
+          );
         case _:
       }
     }
@@ -250,6 +258,13 @@ class SketchController extends ChangeNotifier {
             strokeWidth,
             points: element.points,
           );
+        case RectEle():
+          activeElement = RectEle(
+            color,
+            lineType.isArrow ? element.lineType : lineType,
+            strokeWidth,
+            points: element.points,
+          );
         case _:
       }
     }
@@ -292,6 +307,13 @@ class SketchController extends ChangeNotifier {
           );
         case OvalEle():
           activeElement = OvalEle(
+            color,
+            lineType,
+            strokeWidth,
+            points: element.points,
+          );
+        case RectEle():
+          activeElement = RectEle(
             color,
             lineType,
             strokeWidth,
@@ -473,6 +495,7 @@ class SketchController extends ChangeNotifier {
       case SketchMode.text:
       case SketchMode.edit:
       case SketchMode.oval:
+      case SketchMode.rect:
     }
   }
 
@@ -530,14 +553,23 @@ class SketchController extends ChangeNotifier {
           }
         });
       case SketchMode.oval:
+      case SketchMode.rect:
         if (touchedElement == null) {
-          inactiveElements = inactiveElements.add(OvalEle.fromStartPointWithSize(
-            color: color,
-            lineType: lineType,
-            strokeWidth: strokeWidth,
-            startPoint: localPosition,
-            localPoint: localPosition,
-          ));
+          final newElement = sketchMode == SketchMode.oval
+              ? OvalEle(
+                  color,
+                  lineType,
+                  strokeWidth,
+                  points: QuadPoints.rectFromSize(startPoint: localPosition, localPoint: localPosition),
+                )
+              : RectEle(
+                  color,
+                  lineType,
+                  strokeWidth,
+                  points: QuadPoints.rectFromSize(startPoint: localPosition, localPoint: localPosition),
+                );
+
+          inactiveElements = inactiveElements.add(newElement);
         } else {
           activeElement = touchedElement;
           _sketchMode = SketchMode.edit;
@@ -675,6 +707,7 @@ class SketchController extends ChangeNotifier {
         notifyListeners();
         break;
       case OvalEle():
+      case RectEle():
         activeElement = element.update(localPosition, localHitPoint);
       default:
         break;
@@ -762,13 +795,26 @@ class SketchController extends ChangeNotifier {
         notifyListeners();
         break;
       case SketchMode.oval:
-        activeElement = OvalEle.fromStartPointWithSize(
-          startPoint: startPoint.toOffset(),
-          localPoint: localPosition,
-          size: 0,
-          color: color,
-          lineType: lineType,
-          strokeWidth: strokeWidth,
+        activeElement = OvalEle(
+          color,
+          lineType,
+          strokeWidth,
+          points: QuadPoints.rectFromSize(
+            startPoint: startPoint.toOffset(),
+            localPoint: localPosition,
+            size: 0,
+          ),
+        );
+      case SketchMode.rect:
+        activeElement = RectEle(
+          color,
+          lineType,
+          strokeWidth,
+          points: QuadPoints.rectFromSize(
+            startPoint: startPoint.toOffset(),
+            localPoint: localPosition,
+            size: 0,
+          ),
         );
       case SketchMode.text:
         break;
@@ -826,15 +872,39 @@ class SketchController extends ChangeNotifier {
 
         if (circleElement == null) return;
 
-        final distance = circleElement.points.pointA.distanceTo(localPosition);
+        final size = max((localPosition.dx - circleElement.points.pointA.dx).abs(),
+            (localPosition.dy - circleElement.points.pointA.dy).abs());
 
-        activeElement = OvalEle.fromStartPointWithSize(
-          startPoint: circleElement.points.pointA,
-          localPoint: localPosition,
-          size: distance,
-          color: color,
-          lineType: lineType,
-          strokeWidth: strokeWidth,
+        activeElement = OvalEle(
+          color,
+          lineType,
+          strokeWidth,
+          points: QuadPoints.rectFromSize(
+            startPoint: circleElement.points.pointA,
+            localPoint: localPosition,
+            size: size,
+          ),
+        );
+        break;
+
+      case SketchMode.rect:
+        final element = _activeElement;
+        final rectElement = element as RectEle?;
+
+        if (rectElement == null) return;
+
+        final size = max((localPosition.dx - rectElement.points.pointA.dx).abs(),
+            (localPosition.dy - rectElement.points.pointA.dy).abs());
+
+        activeElement = RectEle(
+          color,
+          lineType,
+          strokeWidth,
+          points: QuadPoints.rectFromSize(
+            startPoint: rectElement.points.pointA,
+            localPoint: localPosition,
+            size: size,
+          ),
         );
         break;
       case SketchMode.text:
@@ -859,6 +929,7 @@ class SketchController extends ChangeNotifier {
         deactivateActiveElement();
         break;
       case SketchMode.oval:
+      case SketchMode.rect:
         deactivateActiveElement();
         break;
       case SketchMode.path:
