@@ -479,8 +479,8 @@ class SketchController extends ChangeNotifier {
 
   /// If currently editing an element on long press, trigger [_onEditUpdate]
   /// Else, trigger the [_onMoveUpdate] to handle move update for the current [sketchMode]
-  void onLongPressMoveUpdate(Offset localPosition) =>
-      _isLongPressEdit ? _onEditUpdate(localPosition) : _onMoveUpdate(localPosition);
+  void onLongPressMoveUpdate(BuildContext context, Offset localPosition) =>
+      _isLongPressEdit ? _onEditUpdate(context, localPosition) : _onMoveUpdate(context, localPosition);
 
   /// If [_isLongPressEdit] is true, set it to false and trigger [_onEditEnd]
   /// Else, trigger [_onMoveEnd] to handle press end for the current [sketchMode]
@@ -514,7 +514,7 @@ class SketchController extends ChangeNotifier {
 
   void onPanStart(Offset position) => _onPressStart(position);
 
-  void onPanUpdate(Offset position) => _onMoveUpdate(position);
+  void onPanUpdate(BuildContext context, Offset position) => _onMoveUpdate(context, position);
 
   void onPanEnd() => _onMoveEnd();
 
@@ -640,7 +640,7 @@ class SketchController extends ChangeNotifier {
   }
 
   /// Update the [_activeElement] based on the hit point's [localPosition]
-  void _onEditUpdate(Offset localPosition) {
+  void _onEditUpdate(BuildContext context, Offset localPosition) {
     final element = _activeElement;
     final localHitPoint = hitPoint;
 
@@ -713,6 +713,8 @@ class SketchController extends ChangeNotifier {
           localPosition,
           localHitPoint,
         );
+        final textEle = _activeElement as TextEle?;
+        activeElement = textEle?..orientation = MediaQuery.of(context).orientation;
         notifyListeners();
         break;
       case OvalEle():
@@ -833,7 +835,7 @@ class SketchController extends ChangeNotifier {
   }
 
   /// Handle move update for the current [sketchMode]
-  void _onMoveUpdate(Offset localPosition) {
+  void _onMoveUpdate(BuildContext context, Offset localPosition) {
     switch (sketchMode) {
       case SketchMode.line:
         final element = _activeElement;
@@ -918,7 +920,7 @@ class SketchController extends ChangeNotifier {
         break;
       case SketchMode.text:
       case SketchMode.edit:
-        _onEditUpdate(localPosition);
+        _onEditUpdate(context, localPosition);
     }
   }
 

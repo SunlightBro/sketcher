@@ -88,7 +88,7 @@ class _SketchWidgetState extends State<SketchWidget> {
 
             setState(() => panPosition = modifiedOffset);
 
-            controller.onPanUpdate(modifiedOffset);
+            controller.onPanUpdate(context, modifiedOffset);
           } else {
             controller.isZooming = true;
             controller.scaleFactor = controller.baseScaleFactor * details.scale;
@@ -119,7 +119,7 @@ class _SketchWidgetState extends State<SketchWidget> {
           },
           onLongPressMoveUpdate: (LongPressMoveUpdateDetails details) {
             setState(() => panPosition = details.localPosition);
-            controller.onLongPressMoveUpdate(details.localPosition);
+            controller.onLongPressMoveUpdate(context, details.localPosition);
           },
           onLongPressEnd: (LongPressEndDetails details) {
             setState(() => panPosition = null);
