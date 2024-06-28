@@ -458,6 +458,7 @@ class SketchController extends ChangeNotifier {
         return element;
       }
     }).toIList();
+    notifyListeners();
   }
 
   /// If there is a touched element upon long press, triggers the [_onEditStart]
