@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sketch/src/extensions.dart';
 import 'package:sketch/src/painter.dart';
@@ -55,6 +58,8 @@ class _SketchWidgetState extends State<SketchWidget> {
           )
         : null;
     final magnifierPosition = panPosition;
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    final isIOS = !kIsWeb && Platform.isIOS;
 
     return LayoutBuilder(builder: (context, constraints) {
       final renderBox = context.findRenderObject() as RenderBox;
@@ -166,7 +171,7 @@ class _SketchWidgetState extends State<SketchWidget> {
                       size: Size.square(magnifierSize),
                       magnificationScale: controller.magnifierScale,
                       focalPointOffset: Offset(
-                        magnifierSize / 2,
+                        magnifierSize / (isIOS && isLandscape ? 6 : 2),
                         magnifierSize / 2,
                       ),
                     ),
